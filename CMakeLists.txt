@@ -6,7 +6,7 @@ cmake_minimum_required (VERSION 3.8)
 project ("uartframeparser")
 
 # 将源代码添加到此项目的可执行文件。
-add_executable (uartframeparser "main.c" "uartframeparser.h")
+add_executable (uartframeparser "config_parse.c" "lua_env.c" "uartframeparser.h")
 
 set(_IMPORT_PREFIX "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 find_package(cJSON REQUIRED)

@@ -1,0 +1,125 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "type": "object",
+    "properties": {
+        "definitions": {
+            "type": "array",
+            "description": "帧类型定义",
+            "minItems": 1,
+            "items": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "帧类型名称"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "帧类型注释"
+                    },
+                    "validator": {
+                        "type": "string",
+                        "description": "帧数据校验表达式"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "description": "帧字段列表",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "description": "帧字段属性",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "帧字段名称"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "帧字段注释"
+                                },
+                                "bytes": {
+                                    "oneOf": [
+                                        {
+                                            "type": "integer",
+                                            "description": "帧字段长度（字节）",
+                                            "minimum": 1
+                                        },
+                                        {
+                                            "type": "string",
+                                            "description": "帧字段长度（字节）表达式"
+                                        }
+                                    ]
+                                },
+                                "bitfields": {
+                                    "type": "array",
+                                    "description": "该字段内的位字段列表",
+                                    "minItems": 1,
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "type": "string",
+                                                "description": "该位字段名称"
+                                            },
+                                            "description": {
+                                                "type": "string",
+                                                "description": "该位字段注释"
+                                            },
+                                            "bits": {
+                                                "type": "integer",
+                                                "description": "该位字段长度（位）",
+                                                "minimum": 1
+                                            },
+                                            "default": {
+                                                "type": "string",
+                                                "description": "该位字段默认值表达式"
+                                            }
+                                        },
+                                        "required": [
+                                            "bits"
+                                        ]
+                                    }
+                                },
+                                "frames": {
+                                    "$ref": "#/properties/frames"
+                                },
+                                "default": {
+                                    "type": "string",
+                                    "description": "帧字段默认值表达式"
+                                }
+                            },
+                            "required": ["bytes"],
+                            "dependencies": {
+                                "bitfields": {
+                                    "not": {
+                                        "required": ["frames"]
+                                    }
+                                },
+                                "default": {
+                                    "not": {
+                                        "required": ["frames"]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "fields"
+            ]
+        },
+        "frames": {
+            "type": "array",
+            "description": "要检测的帧类型名称列表",
+            "minItems": 1,
+            "items": {
+                "type": "string",
+                "description": "帧类型名称"
+            }
+        }
+    },
+    "required": [
+        "definitions",
+        "frames"
+    ]
+}

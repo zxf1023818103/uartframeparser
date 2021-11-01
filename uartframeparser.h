@@ -4,59 +4,98 @@
 #include <stdint.h>
 #include <lua.h>
 
-enum uart_frame_parser_errors {
+/// <summary>
+/// 帧解析器错误类型
+/// </summary>
+enum uart_frame_parser_error_types
+{
+
+	/// <summary>
+	/// cJSON 库返回的错误
+	/// </summary>
 	UART_FRAME_PARSER_ERROR_CJSON = 1,
+
+	/// <summary>
+	/// 内存分配失败
+	/// </summary>
 	UART_FRAME_PARSER_ERROR_MALLOC = 2,
-	UART_FRAME_PARSER_ERROR_CONFIG = 3,
+
+	/// <summary>
+	/// 配置项错误
+	/// </summary>
+	UART_FRAME_PARSER_ERROR_PARSE_CONFIG = 3,
+
+	/// <summary>
+	/// Lua 返回的错误
+	/// </summary>
+	UART_FRAME_PARSER_ERROR_LUA = 4,
 };
 
 /// <summary>
 /// 帧解析器错误回调函数定义
 /// </summary>
-typedef void(*uart_frame_parser_error_callback_t)(uint8_t error_type, ...);
+typedef void (*uart_frame_parser_error_callback_t)(uint8_t error_type, ...);
+
+/// <summary>
+/// 用于帧解析器阻塞读取数据的回调函数的定义
+/// </summary>
+typedef void (*uart_frame_parser_blocking_read_data_fn_t)(uint8_t* data, uint32_t size);
 
 /// <summary>
 /// 帧类型信息
 /// </summary>
-struct uart_frame_config {
+struct uart_frame_definition
+{
+
+	/// <summary>
+	/// 指向下一个帧类型
+	/// </summary>
+	struct uart_frame_definition *next;
 
 	/// <summary>
 	/// 帧类型名称
 	/// </summary>
-	char* name;
+	char *name;
 
 	/// <summary>
 	/// 帧类型描述
 	/// </summary>
-	char* description;
+	char *description;
 
 	/// <summary>
 	/// 帧类型校验表达式
 	/// </summary>
-	char* validator_expression;
+	char *validator_expression;
 
 	/// <summary>
 	/// 帧字段列表
 	/// </summary>
-	struct uart_frame_field_config *field_head;
+	struct uart_frame_field_definition *field_head;
 };
 
 /// <summary>
 /// 帧字段信息
 /// </summary>
-struct uart_frame_field_config {
+struct uart_frame_field_definition
+{
+
+	/// <summary>
+	/// 指向下一个帧字段
+	/// </summary>
+	struct uart_frame_field_definition *next;
 
 	/// <summary>
 	/// 帧字段名称
 	/// </summary>
-	char* name;
+	char *name;
 
 	/// <summary>
 	/// 帧字段描述
 	/// </summary>
-	char* description;
+	char *description;
 
-	struct {
+	struct
+	{
 		/// <summary>
 		/// 帧字段信息含有长度表达式
 		/// </summary>
@@ -76,12 +115,12 @@ struct uart_frame_field_config {
 	/// <summary>
 	/// 帧字段长度（字节）
 	/// </summary>
-	union {
-
+	union
+	{
 		/// <summary>
 		/// 帧字段长度表达式
 		/// </summary>
-		char* expression;
+		char *expression;
 
 		/// <summary>
 		/// 帧字段长度数值
@@ -89,64 +128,40 @@ struct uart_frame_field_config {
 		uint32_t value;
 	} length;
 
-	union {
-
+	union
+	{
 		/// <summary>
 		/// 帧字段默认值表达式
 		/// </summary>
-		char* default_value_expression;
+		char *default_value_expression;
 
-		struct {
-			/// <summary>
-			/// 要检测的子帧类型个数
-			/// </summary>
-			uint32_t subframe_numbers;
+		/// <summary>
+		/// 要探测的子帧类型列表
+		/// </summary>
+		struct uart_frame_detected_frame *detected_subframe_head;
 
-			/// <summary>
-			/// 要检测的子帧类型列表
-			/// </summary>
-			struct uart_frame_config* subframes[1];
-		};
-
-		struct {
-			/// <summary>
-			/// 该字段包含的位字段个数
-			/// </summary>
-			uint32_t bitfield_numbers;
-
-			/// <summary>
-			/// 该字段包含的位字段列表
-			/// </summary>
-			struct {
-				
-				/// <summary>
-				/// 位字段名称
-				/// </summary>
-				char* name;
-
-				/// <summary>
-				/// 位字段描述
-				/// </summary>
-				char* description;
-
-				/// <summary>
-				/// 位字段长度
-				/// </summary>
-				uint8_t bits;
-			} bitfields [1];
-		};
+		/// <summary>
+		/// 包含的位字段列表
+		/// </summary>
+		struct uart_frame_bitfield_definition *bitfield_head;
 	};
 };
 
 /// <summary>
 /// 帧解析器信息
 /// </summary>
-struct uart_frame_parser {
+struct uart_frame_parser
+{
 
 	/// <summary>
 	/// 用于执行表达式的 Lua 状态机
 	/// </summary>
-	lua_State* L;
+	lua_State *L;
+
+	/// <summary>
+	/// 帧解析器会调用此函数阻塞读取要解析的数据
+	/// </summary>
+	uart_frame_parser_blocking_read_data_fn_t on_data_request;
 
 	/// <summary>
 	/// 帧解析器的错误回调函数
@@ -154,47 +169,72 @@ struct uart_frame_parser {
 	uart_frame_parser_error_callback_t on_error;
 
 	/// <summary>
-	/// 帧类型数量
-	/// </summary>
-	uint32_t frame_numbers;
-
-	/// <summary>
 	/// 帧类型列表
 	/// </summary>
-	struct uart_frame_config* frames;
-
-	/// <summary>
-	/// 要检测的帧类型数量
-	/// </summary>
-	uint32_t detected_frame_numbers;
+	struct uart_frame_definition *frame_definition_head;
 
 	/// <summary>
 	/// 要检测的帧类型列表
 	/// </summary>
-	struct uart_frame_config* detected_frames[1];
+	struct uart_frame_detected_frame *detected_frame_head;
 };
 
 /// <summary>
-/// 初始化帧解析器
+/// 要探测的帧类型信息
+/// </summary>
+struct uart_frame_detected_frame
+{
+	/// <summary>
+	/// 指向下一个要探测的帧类型
+	/// </summary>
+	struct uart_frame_detected_frame *next;
+
+	/// <summary>
+	/// 要探测的帧类型定义
+	/// </summary>
+	struct uart_frame_definition *definition;
+};
+
+/// <summary>
+/// 帧内位字段定义
+/// </summary>
+struct uart_frame_bitfield_definition
+{
+	/// <summary>
+	/// 指向下一个位字段
+	/// </summary>
+	struct uart_frame_bitfield_definition* next;
+
+	/// <summary>
+	/// 位字段名称
+	/// </summary>
+	char *name;
+
+	/// <summary>
+	/// 位字段描述
+	/// </summary>
+	char *description;
+
+	/// <summary>
+	/// 位字段长度
+	/// </summary>
+	uint8_t bits;
+};
+
+/// <summary>
+/// 创建帧解析器
 /// </summary>
 /// <param name="ptr_parser">指向传出的帧解析器指针</param>
 /// <param name="json_config">帧解析器的 JSON 配置文件</param>
 /// <param name="json_config_size">帧解析器的 JSON 配置文件长度</param>
 /// <param name="on_error">帧解析器的错误回调函数</param>
-void uart_frame_parser_init(struct uart_frame_parser** ptr_parser, const char* json_config, uint32_t json_config_size, uart_frame_parser_error_callback_t on_error);
+/// <return>创建的帧解析器实例</return>
+struct uart_frame_parser *uart_frame_parser_create(const char *json_config, uint32_t json_config_size, uart_frame_parser_error_callback_t on_error);
 
 /// <summary>
-/// 释放帧解析器
+/// 释放帧解析器实例
 /// </summary>
-/// <param name="parser">要释放的帧解析器</param>
-void uart_frame_parser_release(struct uart_frame_parser* parser);
-
-/// <summary>
-/// 向帧解析器传入要解析的原始数据
-/// </summary>
-/// <param name="parser">要传入数据的帧解析器</param>
-/// <param name="data">要传入的数据</param>
-/// <param name="size">传入数据的长度（字节）</param>
-void uart_frame_parser_feed_data(struct uart_frame_parser* parser, uint8_t* data, uint32_t size);
+/// <param name="parser">要释放的帧解析器实例</param>
+void uart_frame_parser_release(struct uart_frame_parser *parser);
 
 #endif // UART_FRAME_PARSER_H

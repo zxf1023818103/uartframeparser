@@ -1,0 +1,20 @@
+{
+    "$schema": "./frame.json",
+    "definitions": [
+        {
+            "name": "boiler_status_report",
+            "description": "壁挂炉全状态上报",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "bitfields": [{
+                        "bits": 1
+                    }]
+                }
+            ]
+        }
+    ],
+    "frames": [
+        "boiler_status_report"
+    ]
+}
