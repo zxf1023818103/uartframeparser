@@ -152,6 +152,10 @@ struct uart_frame_field_definition
 /// </summary>
 struct uart_frame_parser
 {
+	/// <summary>
+	/// 数据缓冲区
+	/// </summary>
+	struct uart_frame_parser_buffer* buffer;
 
 	/// <summary>
 	/// 用于执行表达式的 Lua 状态机

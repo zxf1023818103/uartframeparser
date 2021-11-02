@@ -4,9 +4,13 @@
 #include <cjson/cJSON.h>
 #include "uartframeparser.h"
 
-extern lua_State *lua_state_create(uart_frame_parser_error_callback_t on_error);
+extern lua_State* lua_state_create(struct uart_frame_definition* frame_definition_head, uart_frame_parser_error_callback_t on_error);
 
 extern void lua_state_release(lua_State *L);
+
+extern struct uart_frame_parser_buffer* buffer_create(uart_frame_parser_error_callback_t on_error);
+
+extern void buffer_release(struct uart_frame_parser_buffer* buffer);
 
 static void uart_frame_detected_frame_release(struct uart_frame_detected_frame *detected_frame_head)
 {
@@ -312,7 +316,7 @@ static struct uart_frame_definition *parse_definition_node(cJSON *definition_nod
 
 			if (name)
 			{
-				struct uart_frame_field_definition *field_head = parse_frame_fields_node(fields_node);
+				struct uart_frame_field_definition *field_head = parse_frame_fields_node(fields_node, on_error);
 				if (field_head)
 				{
 					struct uart_frame_definition *frame_definition = calloc(1, sizeof(struct uart_frame_definition));
@@ -403,7 +407,7 @@ static struct uart_frame_definition *parse_definitions_node(cJSON *definitions_n
 				struct uart_frame_definition *cur_frame_definition = NULL, *frame_definition_head = NULL;
 				while (definition_node)
 				{
-					struct uart_frame_definition *frame_definition = parse_definition_node(definition_node);
+					struct uart_frame_definition *frame_definition = parse_definition_node(definition_node, on_error);
 					if (frame_definition)
 					{
 						if (cur_frame_definition)
@@ -457,7 +461,7 @@ static struct uart_frame_detected_frame *parse_detected_frames_node(struct uart_
 				struct uart_frame_detected_frame *cur_detected_frame = NULL, *detected_frame_head = NULL;
 				while (detected_frame_node)
 				{
-					struct uart_frame_detected_frame *detected_frame = parse_detected_frame_node(frame_definition_head, detected_frame_node);
+					struct uart_frame_detected_frame *detected_frame = parse_detected_frame_node(frame_definition_head, detected_frame_node, on_error);
 					if (detected_frame)
 					{
 						if (cur_detected_frame)
@@ -542,47 +546,58 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 							}
 							else
 							{
-								uart_frame_detected_frame_release(detected_frame_head);
-								uart_frame_definition_release(frame_definition_head);
-								return NULL;
+								goto err2;
 							}
 						}
 					}
 				}
 
-				lua_State *L = lua_state_create(on_error);
-				if (L)
+				struct buffer* buffer = buffer_create(on_error);
+				if (buffer)
 				{
-					struct uart_frame_parser *parser = calloc(1, sizeof(struct uart_frame_parser));
-					if (parser)
+					lua_State* L = lua_state_create(frame_definition_head, on_error);
+					if (L)
 					{
-						parser->detected_frame_head = detected_frame_head;
-						parser->frame_definition_head = frame_definition_head;
-						parser->on_error = on_error;
-						parser->L = L;
+						struct uart_frame_parser* parser = calloc(1, sizeof(struct uart_frame_parser));
+						if (parser)
+						{
+							parser->detected_frame_head = detected_frame_head;
+							parser->frame_definition_head = frame_definition_head;
+							parser->on_error = on_error;
+							parser->buffer = buffer;
+							parser->L = L;
 
-						lua_pushlightuserdata(L, parser);
-						lua_setglobal(L, "parser");
+							lua_pushlightuserdata(L, parser);
+							lua_setglobal(L, "parser");
 
-						return parser;
+							return parser;
+						}
+						else
+						{
+							on_error(UART_FRAME_PARSER_ERROR_MALLOC, "cannot malloc a parser");
+						err4:
+							lua_state_release(L);
+						err3:
+							buffer_release(buffer);
+						err2:
+							uart_frame_detected_frame_release(detected_frame_head);
+						err1:
+							uart_frame_definition_release(frame_definition_head);
+						}
 					}
 					else
 					{
-						uart_frame_detected_frame_release(detected_frame_head);
-						uart_frame_definition_release(frame_definition_head);
-						lua_state_release(L);
-						on_error(UART_FRAME_PARSER_ERROR_MALLOC, "cannot malloc a parser");
+						goto err3;
 					}
 				}
 				else
 				{
-					uart_frame_detected_frame_release(detected_frame_head);
-					uart_frame_definition_release(frame_definition_head);
+					goto err2;
 				}
 			}
 			else
 			{
-				uart_frame_definition_release(frame_definition_head);
+				goto err1;
 			}
 		}
 	}
