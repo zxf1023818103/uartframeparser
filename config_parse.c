@@ -8,10 +8,6 @@ extern lua_State* lua_state_create(struct uart_frame_definition* frame_definitio
 
 extern void lua_state_release(lua_State *L);
 
-extern struct uart_frame_parser_buffer* buffer_create(uart_frame_parser_error_callback_t on_error);
-
-extern void buffer_release(struct uart_frame_parser_buffer* buffer);
-
 static void uart_frame_detected_frame_release(struct uart_frame_detected_frame *detected_frame_head)
 {
 	struct uart_frame_detected_frame *next;
@@ -352,39 +348,19 @@ static struct uart_frame_definition *parse_definition_node(cJSON *definition_nod
 	return NULL;
 }
 
-static struct uart_frame_definition *find_frame_definition_by_name(struct uart_frame_definition *head, const char *name)
-{
-	while (head)
-	{
-		if (strcmp(name, head->name) == 0)
-		{
-			return head;
-		}
-		head = head->next;
-	}
-}
-
-static struct uart_frame_detected_frame *parse_detected_frame_node(struct uart_frame_definition *frame_definition_head, cJSON *detected_frame_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_detected_frame *parse_detected_frame_node(cJSON *detected_frame_node, uart_frame_parser_error_callback_t on_error)
 {
 	if (cJSON_IsString(detected_frame_node))
 	{
-		struct uart_frame_definition *frame_definition = find_frame_definition_by_name(frame_definition_head, detected_frame_node->valuestring);
-		if (frame_definition)
+		struct uart_frame_detected_frame *detected_frame = calloc(1, sizeof(struct uart_frame_detected_frame));
+		if (detected_frame)
 		{
-			struct uart_frame_detected_frame *detected_frame = calloc(1, sizeof(struct uart_frame_detected_frame));
-			if (detected_frame)
-			{
-				detected_frame->definition = frame_definition;
-				return detected_frame;
-			}
-			else
-			{
-				on_error(UART_FRAME_PARSER_ERROR_MALLOC, "cannot malloc a detected frame");
-			}
+			detected_frame->name = detected_frame_node->valuestring;
+			return detected_frame;
 		}
 		else
 		{
-			on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, "frame definition '%s' not found", frame_definition);
+			on_error(UART_FRAME_PARSER_ERROR_MALLOC, "cannot malloc a detected frame");
 		}
 	}
 	else
@@ -449,7 +425,7 @@ static struct uart_frame_definition *parse_definitions_node(cJSON *definitions_n
 	return NULL;
 }
 
-static struct uart_frame_detected_frame *parse_detected_frames_node(struct uart_frame_definition *frame_definition_head, cJSON *detected_frames_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_detected_frame *parse_detected_frames_node(cJSON *detected_frames_node, uart_frame_parser_error_callback_t on_error)
 {
 	if (detected_frames_node)
 	{
@@ -461,7 +437,7 @@ static struct uart_frame_detected_frame *parse_detected_frames_node(struct uart_
 				struct uart_frame_detected_frame *cur_detected_frame = NULL, *detected_frame_head = NULL;
 				while (detected_frame_node)
 				{
-					struct uart_frame_detected_frame *detected_frame = parse_detected_frame_node(frame_definition_head, detected_frame_node, on_error);
+					struct uart_frame_detected_frame *detected_frame = parse_detected_frame_node(detected_frame_node, on_error);
 					if (detected_frame)
 					{
 						if (cur_detected_frame)
@@ -529,30 +505,11 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 
 		if (frame_definition_head)
 		{
-			struct uart_frame_detected_frame *detected_frame_head = parse_detected_frames_node(frame_definition_head, detected_frames_node, on_error);
+			struct uart_frame_detected_frame *detected_frame_head = parse_detected_frames_node(detected_frames_node, on_error);
 
 			if (detected_frame_head)
 			{
-				for (struct uart_frame_definition *cur_frame_definition = frame_definition_head; cur_frame_definition != NULL; cur_frame_definition = cur_frame_definition->next)
-				{
-					for (struct uart_frame_field_definition *cur_field_definition = cur_frame_definition->field_head; cur_field_definition != NULL; cur_field_definition = cur_field_definition->next)
-					{
-						if (cur_field_definition->has_subframes)
-						{
-							struct uart_frame_detected_frame *detected_subframe_head = parse_detected_frame_node(frame_definition_head, cur_field_definition->detected_subframe_head, on_error);
-							if (detected_subframe_head)
-							{
-								cur_field_definition->detected_subframe_head = detected_subframe_head;
-							}
-							else
-							{
-								goto err2;
-							}
-						}
-					}
-				}
-
-				struct buffer* buffer = buffer_create(on_error);
+				struct buffer* buffer = uart_frame_parser_buffer_create(on_error);
 				if (buffer)
 				{
 					lua_State* L = lua_state_create(frame_definition_head, on_error);
@@ -568,7 +525,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 							parser->L = L;
 
 							lua_pushlightuserdata(L, parser);
-							lua_setglobal(L, "parser");
+							lua_setfield(L, LUA_REGISTRYINDEX, "parser");
 
 							return parser;
 						}
@@ -578,7 +535,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 						err4:
 							lua_state_release(L);
 						err3:
-							buffer_release(buffer);
+							uart_frame_parser_buffer_release(buffer);
 						err2:
 							uart_frame_detected_frame_release(detected_frame_head);
 						err1:

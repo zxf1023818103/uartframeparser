@@ -163,11 +163,6 @@ struct uart_frame_parser
 	lua_State *L;
 
 	/// <summary>
-	/// 帧解析器会调用此函数阻塞读取要解析的数据
-	/// </summary>
-	uart_frame_parser_blocking_read_data_fn_t on_data_request;
-
-	/// <summary>
 	/// 帧解析器的错误回调函数
 	/// </summary>
 	uart_frame_parser_error_callback_t on_error;
@@ -194,9 +189,9 @@ struct uart_frame_detected_frame
 	struct uart_frame_detected_frame *next;
 
 	/// <summary>
-	/// 要探测的帧类型定义
+	/// 要探测的帧类型名称
 	/// </summary>
-	struct uart_frame_definition *definition;
+	char *name;
 };
 
 /// <summary>
@@ -240,5 +235,67 @@ struct uart_frame_parser *uart_frame_parser_create(const char *json_config, uint
 /// </summary>
 /// <param name="parser">要释放的帧解析器实例</param>
 void uart_frame_parser_release(struct uart_frame_parser *parser);
+
+/// <summary>
+/// 向帧解析器填充数据进行解析
+/// </summary>
+/// <param name="parser">帧解析器</param>
+/// <param name="data">要填充的数据的起始位置</param>
+/// <param name="size">要填充的数据大小（字节）</param>
+void uart_frame_parser_feed_data(struct uart_frame_parser* parser, uint8_t* data, uint32_t size);
+
+/// <summary>
+/// 创建帧解析器缓冲区
+/// </summary>
+/// <param name="on_error">错误回调函数</param>
+struct uart_frame_parser_buffer* uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error);
+
+/// <summary>
+/// 释放帧缓冲区
+/// </summary>
+/// <param name="buffer">要释放的帧缓冲区</param>
+void uart_frame_parser_buffer_release(struct uart_frame_parser_buffer* buffer);
+
+/// <summary>
+/// 向帧缓冲区追加数据
+/// </summary>
+/// <param name="buffer">要写入数据的帧缓冲区</param>
+/// <param name="data">指向数据起始位置</param>
+/// <param name="size">写入数据大小（字节）</param>
+void uart_frame_parser_buffer_append(struct uart_frame_parser_buffer* buffer, uint8_t* data, uint32_t size);
+
+/// <summary>
+/// 读取帧缓冲区指定位置的数据
+/// </summary>
+/// <param name="buffer">要读取数据的缓冲区</param>
+/// <param name="offset">数据相对于缓冲区起始位置的偏移量</param>
+/// <param name="data">指向数据存放起始位置</param>
+/// <param name="size">要读取数据的大小（字节）</param>
+/// <returns>
+/// 0：读取的数据超出范围；1：成功
+/// </returns>
+int uart_frame_parser_buffer_read(struct uart_frame_parser_buffer* buffer, uint32_t offset, uint8_t* data, uint32_t size);
+
+/// <summary>
+/// 获取帧缓冲区从当前起始位置开始的数据大小
+/// </summary>
+/// <param name="buffer">要获取大小的帧缓冲区</param>
+/// <returns>帧缓冲区相对于起始位置的数据大小</returns>
+uint32_t uart_frame_parser_buffer_get_size(struct uart_frame_parser_buffer* buffer);
+
+/// <summary>
+/// 向后移动帧缓冲区的起始位置，例如起始向后移动 1 字节，原来第 2 个字节的数据变为第 1 个字节的数据，以此类推
+/// </summary>
+/// <param name="buffer">帧缓冲区</param>
+/// <param name="increasement">起始位置向后移动多少字节</param>
+void uart_frame_parser_buffer_increase_origin(struct uart_frame_parser_buffer* buffer, uint32_t increasement);
+
+/// <summary>
+/// 访问帧缓冲区指定偏移量的字节
+/// </summary>
+/// <param name="buffer">帧缓冲区</param>
+/// <param name="offset">偏移量</param>
+/// <returns>-1：下标越界；非负对应指定位置的字节</returns>
+int uart_frame_parser_buffer_at(struct uart_frame_parser_buffer* buffer, uint32_t offset);
 
 #endif // UART_FRAME_PARSER_H
