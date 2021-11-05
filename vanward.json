@@ -2,19 +2,54 @@
     "$schema": "./frame.json",
     "definitions": [
         {
-            "name": "boiler_status_report",
-            "description": "壁挂炉全状态上报",
+            "name": "status_report",
+            "fields": [
+                {
+                    "bytes": 2,
+                    "name": "sof",
+                    "default": "0x55aa",
+                    "description": "帧头"
+                },
+                {
+                    "bytes": 1,
+                    "name": "length",
+                    "description": "长度"
+                },
+                {
+                    "bytes": "byte(1) - 3",
+                    "name": "subframe",
+                    "frames": ["subframe1", "subframe2"]
+                },
+                {
+                    "bytes": "1",
+                    "name": "checksum"
+                }
+            ],
+            "validator": "byte(0) == 0x55 && byte(1) == 0xaa && sum(0, byte(1) - 2) == byte(byte(1) - 1)"
+        },
+        {
+            "name": "subframe1",
+            "description": "子帧格式1",
             "fields": [
                 {
                     "bytes": 1,
-                    "bitfields": [{
-                        "bits": 1
-                    }]
+                    "name": "working_status",
+                    "description": "工作状态"
                 }
-            ]
+            ],
+            "validator": "byte(0) == 0x01"
+        },
+        {
+            "name": "subframe2",
+            "description": "子帧格式2",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "name": "fan_status",
+                    "description": "风机状态"
+                }
+            ],
+            "validator": "byte(0) == 0x02"
         }
-    ],
-    "frames": [
-        "boiler_status_report"
     ]
 }

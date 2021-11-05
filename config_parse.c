@@ -4,10 +4,6 @@
 #include <cjson/cJSON.h>
 #include "uartframeparser.h"
 
-extern lua_State* lua_state_create(struct uart_frame_definition* frame_definition_head, uart_frame_parser_error_callback_t on_error);
-
-extern void lua_state_release(lua_State *L);
-
 static void uart_frame_detected_frame_release(struct uart_frame_detected_frame *detected_frame_head)
 {
 	struct uart_frame_detected_frame *next;
@@ -19,14 +15,14 @@ static void uart_frame_detected_frame_release(struct uart_frame_detected_frame *
 	}
 }
 
-static void uart_frame_bitfield_definition_release(struct uart_frame_bitfield_definition *bitfield_head)
+static void uart_frame_bitfield_definition_release(struct uart_frame_bitfield_definition *bitfield_definition_head)
 {
 	struct uart_frame_bitfield *next;
-	while (bitfield_head)
+	while (bitfield_definition_head)
 	{
-		next = bitfield_head->next;
-		free(bitfield_head);
-		bitfield_head = next;
+		next = bitfield_definition_head->next;
+		free(bitfield_definition_head);
+		bitfield_definition_head = next;
 	}
 }
 
@@ -41,7 +37,7 @@ static void uart_frame_field_definition_release(struct uart_frame_field_definiti
 		}
 		else if (field_definition_head->has_bitfields)
 		{
-			uart_frame_bitfield_definition_release(field_definition_head->bitfield_head);
+			uart_frame_bitfield_definition_release(field_definition_head->bitfield_definition_head);
 		}
 
 		next = field_definition_head->next;
@@ -62,7 +58,7 @@ static void uart_frame_definition_release(struct uart_frame_definition *frame_de
 	}
 }
 
-static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_engine* expression_engine, uart_frame_parser_error_callback_t on_error)
 {
 	if (cJSON_IsObject(field_node))
 	{
@@ -70,9 +66,9 @@ static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_n
 		cJSON *subframes_node = NULL;
 		char *name = NULL;
 		char *description = NULL;
-		char *length_expression = NULL;
+		struct uart_frame_parser_expression *length_expression = NULL;
 		uint32_t length_value = 0;
-		char *default_value_expression = NULL;
+		struct uart_frame_parser_expression *default_value_expression = NULL;
 
 		cJSON *field_attribute_node = field_node->child;
 		while (field_attribute_node)
@@ -103,7 +99,12 @@ static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_n
 			{
 				if (cJSON_IsString(field_attribute_node))
 				{
-					length_expression = field_attribute_node->valuestring;
+					length_expression = uart_frame_parser_expression_create(expression_engine, field_attribute_node->valuestring, NULL);
+					if (!length_expression)
+					{
+						on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, "field length expression is invalid");
+						return NULL;
+					}
 				}
 				else if (cJSON_IsNumber(field_attribute_node))
 				{
@@ -118,7 +119,12 @@ static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_n
 			{
 				if (cJSON_IsString(field_attribute_node))
 				{
-					default_value_expression = field_attribute_node->valuestring;
+					default_value_expression = uart_frame_parser_expression_create(expression_engine, field_attribute_node->valuestring, NULL);
+					if (default_value_expression)
+					{
+						on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, "field default expression is invalid");
+						return NULL;
+					}
 				}
 				else
 				{
@@ -161,15 +167,15 @@ static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_n
 
 						if (bitfields_node)
 						{
-							struct uart_frame_bitfield_definition *bitfield_head = parse_frame_bitfields_node(bitfields_node, on_error);
-							if (bitfield_head)
+							struct uart_frame_bitfield_definition *bitfield_definition_head = parse_frame_bitfields_node(bitfields_node, on_error);
+							if (bitfield_definition_head)
 							{
 								field_definition->has_bitfields = 1;
-								field_definition->bitfield_head = bitfield_head;
+								field_definition->bitfield_definition_head = bitfield_definition_head;
 							}
 							else
 							{
-								uart_frame_bitfield_definition_release(bitfield_head);
+								uart_frame_bitfield_definition_release(bitfield_definition_head);
 								free(field_definition);
 								return NULL;
 							}
@@ -210,7 +216,7 @@ static struct uart_frame_field_definition *parse_frame_field_node(cJSON *field_n
 	return NULL;
 }
 
-static struct uart_frame_field_definition *parse_frame_fields_node(cJSON *fields_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_field_definition *parse_frame_fields_node(cJSON *fields_node, struct uart_frame_parser_expression_engine* expression_engine, uart_frame_parser_error_callback_t on_error)
 {
 	if (cJSON_IsArray(fields_node))
 	{
@@ -220,7 +226,7 @@ static struct uart_frame_field_definition *parse_frame_fields_node(cJSON *fields
 			struct uart_frame_field_definition *cur_field_definition = NULL, *field_definition_head = NULL;
 			while (field_node)
 			{
-				struct uart_frame_field_definition *field_definition = parse_frame_field_node(field_node, on_error);
+				struct uart_frame_field_definition *field_definition = parse_frame_field_node(field_node, expression_engine, on_error);
 				if (field_definition)
 				{
 					if (cur_field_definition)
@@ -255,7 +261,7 @@ static struct uart_frame_field_definition *parse_frame_fields_node(cJSON *fields
 	return NULL;
 }
 
-static struct uart_frame_definition *parse_definition_node(cJSON *definition_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_definition *parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expression_engine* expression_engine, uart_frame_parser_error_callback_t on_error)
 {
 	if (cJSON_IsObject(definition_node))
 	{
@@ -312,7 +318,7 @@ static struct uart_frame_definition *parse_definition_node(cJSON *definition_nod
 
 			if (name)
 			{
-				struct uart_frame_field_definition *field_head = parse_frame_fields_node(fields_node, on_error);
+				struct uart_frame_field_definition *field_head = parse_frame_fields_node(fields_node, expression_engine, on_error);
 				if (field_head)
 				{
 					struct uart_frame_definition *frame_definition = calloc(1, sizeof(struct uart_frame_definition));
@@ -371,7 +377,7 @@ static struct uart_frame_detected_frame *parse_detected_frame_node(cJSON *detect
 	return NULL;
 }
 
-static struct uart_frame_definition *parse_definitions_node(cJSON *definitions_node, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_definition *parse_definitions_node(cJSON *definitions_node, struct uart_frame_parser_expression_engine *expression_engine, uart_frame_parser_error_callback_t on_error)
 {
 	if (definitions_node)
 	{
@@ -383,7 +389,7 @@ static struct uart_frame_definition *parse_definitions_node(cJSON *definitions_n
 				struct uart_frame_definition *cur_frame_definition = NULL, *frame_definition_head = NULL;
 				while (definition_node)
 				{
-					struct uart_frame_definition *frame_definition = parse_definition_node(definition_node, on_error);
+					struct uart_frame_definition *frame_definition = parse_definition_node(definition_node, expression_engine, on_error);
 					if (frame_definition)
 					{
 						if (cur_frame_definition)
@@ -479,7 +485,7 @@ static struct uart_frame_detected_frame *parse_detected_frames_node(cJSON *detec
 	return NULL;
 }
 
-static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_parser_error_callback_t on_error)
+static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_parser_error_callback_t on_error, uart_frame_parser_data_callback_t on_data)
 {
 	if (cJSON_IsObject(config))
 	{
@@ -501,19 +507,17 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 			config = config->next;
 		}
 
-		struct uart_frame_definition *frame_definition_head = parse_definitions_node(definitions_node, on_error);
-
-		if (frame_definition_head)
+		struct uart_frame_detected_frame *detected_frame_head = parse_detected_frames_node(detected_frames_node, on_error);
+		if (detected_frame_head)
 		{
-			struct uart_frame_detected_frame *detected_frame_head = parse_detected_frames_node(detected_frames_node, on_error);
-
-			if (detected_frame_head)
+			struct uart_frame_parser_buffer* buffer = uart_frame_parser_buffer_create(on_error, NULL);
+			if (buffer)
 			{
-				struct buffer* buffer = uart_frame_parser_buffer_create(on_error);
-				if (buffer)
+				struct uart_frame_parser_expression_engine* expression_engine = uart_frame_parser_expression_engine_create(buffer, on_error, NULL);
+				if (expression_engine)
 				{
-					lua_State* L = lua_state_create(frame_definition_head, on_error);
-					if (L)
+					struct uart_frame_definition *frame_definition_head = parse_definitions_node(definitions_node, expression_engine, on_error);
+					if (frame_definition_head)
 					{
 						struct uart_frame_parser* parser = calloc(1, sizeof(struct uart_frame_parser));
 						if (parser)
@@ -521,11 +525,9 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 							parser->detected_frame_head = detected_frame_head;
 							parser->frame_definition_head = frame_definition_head;
 							parser->on_error = on_error;
+							parser->on_data = on_data;
 							parser->buffer = buffer;
-							parser->L = L;
-
-							lua_pushlightuserdata(L, parser);
-							lua_setfield(L, LUA_REGISTRYINDEX, "parser");
+							parser->expression_engine = expression_engine;
 
 							return parser;
 						}
@@ -533,13 +535,13 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 						{
 							on_error(UART_FRAME_PARSER_ERROR_MALLOC, "cannot malloc a parser");
 						err4:
-							lua_state_release(L);
-						err3:
-							uart_frame_parser_buffer_release(buffer);
-						err2:
-							uart_frame_detected_frame_release(detected_frame_head);
-						err1:
 							uart_frame_definition_release(frame_definition_head);
+						err3:
+							uart_frame_parser_expression_engine_release(expression_engine);
+						err2:
+							uart_frame_parser_buffer_release(buffer);
+						err1:
+							uart_frame_detected_frame_release(detected_frame_head);
 						}
 					}
 					else
@@ -566,13 +568,13 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 	return NULL;
 }
 
-struct uart_frame_parser *uart_frame_parser_create(const char *json_config, uint32_t json_config_size, uart_frame_parser_error_callback_t on_error)
+struct uart_frame_parser* uart_frame_parser_create(const char* json_config, uint32_t json_config_size, uart_frame_parser_error_callback_t on_error, uart_frame_parser_data_callback_t on_data)
 {
 	char *json_config_end = json_config + json_config_size;
 	cJSON *cjson = cJSON_ParseWithOpts(json_config, &json_config_end, 0);
 	if (cjson)
 	{
-		return parse_json_config(cjson, on_error);
+		return parse_json_config(cjson, on_error, on_data);
 	}
 	else
 	{
