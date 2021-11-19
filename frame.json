@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/schema",
+    "$schema": "https://json-schema.org/schema",
     "type": "object",
     "properties": {
         "definitions": {
@@ -71,6 +71,10 @@
                                             "default": {
                                                 "type": "string",
                                                 "description": "该位字段默认值表达式"
+                                            },
+                                            "tostring": {
+                                                "type": "string",
+                                                "description": "调用该表达式将位字段转换为字符串显示"
                                             }
                                         },
                                         "required": [
@@ -84,18 +88,27 @@
                                 "default": {
                                     "type": "string",
                                     "description": "帧字段默认值表达式"
+                                },
+                                "tostring": {
+                                    "type": "string",
+                                    "description": "调用该表达式将帧字段转换为字符串显示"
                                 }
                             },
                             "required": ["bytes"],
                             "dependencies": {
                                 "bitfields": {
                                     "not": {
-                                        "required": ["frames"]
+                                        "required": ["frames", "tostring"]
                                     }
                                 },
                                 "default": {
                                     "not": {
                                         "required": ["frames"]
+                                    }
+                                },
+                                "tostring": {
+                                    "not": {
+                                        "required": ["frames", "bitfields"]
                                     }
                                 }
                             }
@@ -116,6 +129,10 @@
                 "type": "string",
                 "description": "帧类型名称"
             }
+        },
+        "init": {
+            "type": "string",
+            "description": "初始化时会执行该部分语句，可在此添加自定义函数或常量等"
         }
     },
     "required": [
