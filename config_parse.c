@@ -54,7 +54,7 @@ parse_detected_frame_node(cJSON *detected_frame_node, uart_frame_parser_error_ca
             detected_frame->name = detected_frame_node->valuestring;
             return detected_frame;
         } else {
-            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot malloc a detected frame: %s",
+            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a detected frame: %s",
                      cJSON_Print(detected_frame_node));
         }
     } else {
@@ -383,9 +383,9 @@ parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_en
         return ptr_field_definition;
 
         err:
-        uart_frame_parser_expression_release(tostring_expression);
-        uart_frame_parser_expression_release(default_value_expression);
-        uart_frame_parser_expression_release(length_expression);
+        uart_frame_parser_expression_release(expression_engine, tostring_expression);
+        uart_frame_parser_expression_release(expression_engine, default_value_expression);
+        uart_frame_parser_expression_release(expression_engine, length_expression);
     } else {
         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "field is not an object: %s",
                  cJSON_Print(field_node));
@@ -492,7 +492,7 @@ parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expressio
                         return frame_definition;
                     } else {
                         on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
-                                 "cannot malloc a frame definition");
+                                 "cannot allocate a frame definition");
                     }
                 }
             } else {
@@ -603,7 +603,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
 
                             return parser;
                         } else {
-                            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot malloc a parser");
+                            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a parser");
                             uart_frame_definition_release(frame_definition_head);
                             err3:
                             uart_frame_parser_expression_engine_release(expression_engine);

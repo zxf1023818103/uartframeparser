@@ -13,7 +13,7 @@ struct uart_frame_parser_buffer {
 
 };
 
-struct uart_frame_parser_buffer *
+void *
 uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, void *reserved) {
 
     FILE *fp;
@@ -37,42 +37,42 @@ uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, voi
     return NULL;
 }
 
-void uart_frame_parser_buffer_release(struct uart_frame_parser_buffer *buffer) {
-    fclose(buffer->fp);
+void uart_frame_parser_buffer_release(void *buffer) {
+    fclose(((struct uart_frame_parser_buffer*)buffer)->fp);
     free(buffer);
 }
 
-void uart_frame_parser_buffer_append(struct uart_frame_parser_buffer *buffer, uint8_t *data, uint32_t size) {
-    fseek(buffer->fp, 0, SEEK_END);
-    assert(fwrite(data, 1, size, buffer->fp) == size);
+void uart_frame_parser_buffer_append(void *buffer, uint8_t *data, uint32_t size) {
+    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
+    assert(fwrite(data, 1, size, ((struct uart_frame_parser_buffer*)buffer)->fp) == size);
 }
 
 int
-uart_frame_parser_buffer_read(struct uart_frame_parser_buffer *buffer, uint32_t offset, uint8_t *data, uint32_t size) {
-    fseek(buffer->fp, 0, SEEK_END);
-    long filesize = ftell(buffer->fp);
-    if (filesize >= buffer->origin + offset + size) {
-        fseek(buffer->fp, buffer->origin + offset, SEEK_SET);
-        assert(fread(data, 1, size, buffer->fp) == size);
+uart_frame_parser_buffer_read(void *buffer, uint32_t offset, uint8_t *data, uint32_t size) {
+    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
+    long filesize = ftell(((struct uart_frame_parser_buffer*)buffer)->fp);
+    if (filesize >= ((struct uart_frame_parser_buffer*)buffer)->origin + offset + size) {
+        fseek(((struct uart_frame_parser_buffer*)buffer)->fp, ((struct uart_frame_parser_buffer*)buffer)->origin + offset, SEEK_SET);
+        assert(fread(data, 1, size, ((struct uart_frame_parser_buffer*)buffer)->fp) == size);
         return 1;
     }
     return 0;
 }
 
-uint32_t uart_frame_parser_buffer_get_size(struct uart_frame_parser_buffer *buffer) {
-    fseek(buffer->fp, 0, SEEK_END);
-    long size = ftell(buffer->fp);
+uint32_t uart_frame_parser_buffer_get_size(void *buffer) {
+    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
+    long size = ftell(((struct uart_frame_parser_buffer*)buffer)->fp);
     assert(size >= 0);
     uint32_t result = size;
-    result -= buffer->origin;
+    result -= ((struct uart_frame_parser_buffer*)buffer)->origin;
     return result;
 }
 
-void uart_frame_parser_buffer_increase_origin(struct uart_frame_parser_buffer *buffer, uint32_t increment) {
-    buffer->origin += increment;
+void uart_frame_parser_buffer_increase_origin(void *buffer, uint32_t increment) {
+    ((struct uart_frame_parser_buffer*)buffer)->origin += increment;
 }
 
-int uart_frame_parser_buffer_at(struct uart_frame_parser_buffer *buffer, uint32_t offset) {
+int uart_frame_parser_buffer_at(void *buffer, uint32_t offset) {
     uint8_t result;
     if (uart_frame_parser_buffer_read(buffer, offset, &result, 1)) {
         return result;
