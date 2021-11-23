@@ -152,7 +152,7 @@ static int try_to_parse_the_frame(const char *frame_name, struct uart_frame_defi
                     return parse_frame(frame_definition, frame_definition_head,
                                        ptr_field_data_head, buffer, offset, max_size, on_error);
                 } else {
-                    return -1;
+                    return 0;
                 }
             } else {
                 return ret;

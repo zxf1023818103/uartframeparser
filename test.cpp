@@ -30,12 +30,17 @@ static cJSON *stringify_bitfield_data(const uint8_t *data, struct uart_frame_bit
         sprintf(hex_data + (i * 2), "%02x", bitfield_data[i]);
     }
 
-    cJSON *bitfield_data_node = cJSON_CreateString(hex_data);
+    cJSON *bitfield_data_node = cJSON_CreateObject();
+    cJSON_AddStringToObject(bitfield_data_node, "name", bitfield_definition->name);
+    cJSON_AddStringToObject(bitfield_data_node, "description", bitfield_definition->description);
+    cJSON_AddNumberToObject(bitfield_data_node, "bits", bitfield_definition->bits);
+    cJSON_AddStringToObject(bitfield_data_node, "hex", hex_data);
+
     free(hex_data);
     return bitfield_data_node;
 }
 
-cJSON *stringify_bitfields_data(void *buffer, struct uart_frame_bitfield_definition *bitfield_definition_head, uint32_t data_size, uint32_t offset) {
+static cJSON *stringify_bitfields_data(void *buffer, struct uart_frame_bitfield_definition *bitfield_definition_head, uint32_t data_size, uint32_t offset) {
     uint32_t bits = 0;
     cJSON *array = cJSON_CreateArray();
 
@@ -59,7 +64,7 @@ cJSON *stringify_bitfields_data(void *buffer, struct uart_frame_bitfield_definit
     return array;
 }
 
-cJSON *stringify_binary_data(void *buffer, uint32_t data_size, uint32_t offset) {
+static cJSON *stringify_binary_data(void *buffer, uint32_t data_size, uint32_t offset) {
     char *hex_data = (char*)malloc(data_size * 2 + 1);
     uint8_t *data = (uint8_t*)hex_data + data_size + 1;
     uart_frame_parser_buffer_read(buffer, offset, data, data_size);
@@ -73,7 +78,7 @@ cJSON *stringify_binary_data(void *buffer, uint32_t data_size, uint32_t offset) 
     return hex_data_node;
 }
 
-cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_data *field_data_head, uint32_t offset) {
+static cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_data *field_data_head, uint32_t offset) {
     cJSON *frame_data = cJSON_CreateObject();
     cJSON_AddStringToObject(frame_data, "name", frame_definition->name);
     cJSON_AddStringToObject(frame_data, "description", frame_definition->description);
@@ -98,7 +103,7 @@ cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *frame_de
         }
         else {
             cJSON *hex_data = stringify_binary_data(buffer, field_data->data_size, field_offset);
-            cJSON_AddItemToObject(field_data_node, "data", hex_data);
+            cJSON_AddItemToObject(field_data_node, "hex", hex_data);
         }
 
         cJSON_AddItemToArray(data, field_data_node);
@@ -150,6 +155,12 @@ namespace {
             "fields": [
                 {
                     "bytes": 1,
+                    "name": "sof",
+                    "description": "帧头",
+                    "default": "return '\\x01'"
+                },
+                {
+                    "bytes": 1,
                     "name": "working_status",
                     "description": "工作状态"
                 }
@@ -160,6 +171,12 @@ namespace {
             "name": "subframe2",
             "description": "子帧格式2",
             "fields": [
+                {
+                    "bytes": 1,
+                    "name": "sof",
+                    "description": "帧头",
+                    "default": "return '\\x02'"
+                },
                 {
                     "bytes": 1,
                     "name": "fan_status",
@@ -224,7 +241,8 @@ namespace {
 
         ASSERT_NE(nullptr, parser);
 
-        const uint8_t data[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a};
+        const uint8_t data[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
+                                0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b};
 
         int success = 0;
         uart_frame_parser_feed_data(parser, const_cast<uint8_t *>(data), sizeof data, &success);

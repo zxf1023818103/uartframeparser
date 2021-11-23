@@ -404,16 +404,6 @@ static int handle_validator_expression_result(lua_State *L, int status, int resu
     } else {
         if (result_type == LUA_TNUMBER) {
             int ret = (int) lua_tointeger(L, -1);
-            if (ret == -1) {
-                int ret2 = expression_result_create(&expression->result, 0, expression->expression_engine->on_error);
-                if (ret2 > 0) {
-                    expression->result->type = expression->type;
-                    expression->result->boolean = 0;
-                    return 1;
-                } else {
-                    return ret2;
-                }
-            }
             return ret;
         } else {
             handle_lua_error(L, expression->expression_engine->on_error);
