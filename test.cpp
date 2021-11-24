@@ -27,8 +27,11 @@ static cJSON *stringify_bitfield_data(const uint8_t *data, struct uart_frame_bit
         cur_bit++;
     }
 
+    char* hex = hex_data;
+    assert(hex);
     for (uint32_t i = 0; i < bitfield_bytes; i++) {
-        sprintf(hex_data + (i * 2), "%02x", bitfield_data[i]);
+        sprintf(hex, "%02x", bitfield_data[i]);
+        hex += 2;
     }
 
     cJSON *bitfield_data_node = cJSON_CreateObject();
@@ -70,8 +73,11 @@ static cJSON *stringify_binary_data(void *buffer, uint32_t data_size, uint32_t o
     uint8_t *data = (uint8_t*)hex_data + data_size + 1;
     uart_frame_parser_buffer_read(buffer, offset, data, data_size);
 
+    char* hex = hex_data;
+    assert(hex);
     for (uint32_t i = 0; i < data_size; i++) {
-        sprintf(hex_data + (i * 2), "%02x", data[i]);
+        sprintf(hex, "%02x", data[i]);
+        hex += 2;
     }
 
     cJSON *hex_data_node = cJSON_CreateString(hex_data);
@@ -199,20 +205,20 @@ namespace {
         const char *error_type_name[] = {"", "cJSON", "malloc", "Config Parse", "Lua"};
 
         const char *log_template = "%s:%d:%s: %s";
-        char *format = static_cast<char *>(std::calloc(
-                std::snprintf(nullptr, 0, log_template, file, line, error_type_name[error_type], fmt) + 1,
-                1));
-        std::sprintf(format, log_template, file, line, fmt);
+        char *format = (char *)calloc(snprintf(nullptr, 0, log_template, file, line, error_type_name[error_type], fmt) + 1, 1);
+        assert(format != nullptr);
+        sprintf(format, log_template, file, line, fmt);
 
         va_list ap1, ap2;
         va_start(ap1, fmt);
         va_copy(ap2, ap1);
 
-        char *message = static_cast<char *>(std::calloc(std::vsnprintf(nullptr, 0, format, ap1) + 1, 1));
-        std::vsprintf(message, format, ap2);
+        char *message = (char *)calloc(vsnprintf(nullptr, 0, format, ap1) + 1, 1);
+        assert(message != nullptr);
+        vsprintf(message, format, ap2);
         GTEST_NONFATAL_FAILURE_(message);
-        std::free(message);
-        std::free(format);
+        free(message);
+        free(format);
     }
 
     void on_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_data *field_data_head,
@@ -230,7 +236,7 @@ namespace {
 
     TEST(Example1, ConfigLoadTest) {
 
-        struct uart_frame_parser *parser = uart_frame_parser_create(json, strlen(json), on_error, on_data);
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data);
 
         ASSERT_NE(nullptr, parser);
 
@@ -239,7 +245,7 @@ namespace {
 
     TEST(Example1, FrameParseTest) {
 
-        struct uart_frame_parser *parser = uart_frame_parser_create(json, strlen(json), on_error, on_data);
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data);
 
         ASSERT_NE(nullptr, parser);
 
@@ -247,7 +253,7 @@ namespace {
                                 0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b};
 
         int success = 0;
-        uart_frame_parser_feed_data(parser, const_cast<uint8_t *>(data), sizeof data, &success);
+        uart_frame_parser_feed_data(parser, (uint8_t *)data, sizeof data, &success);
 
         uart_frame_parser_release(parser);
 

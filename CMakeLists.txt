@@ -5,6 +5,11 @@ cmake_minimum_required(VERSION 3.8)
 
 project("uartframeparser")
 
+# 禁用 MSVC 的使用不安全 C 语言标准库函数时弹出的警告
+if (MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 # 将源代码添加到此项目的可执行文件。
 add_library(uartframeparser STATIC "config_parse.c" "frame_parse.c" "uartframeparser.h" "buffer.c" "expression.c")
 

@@ -9,8 +9,7 @@ struct uart_frame_parser_buffer {
 
     FILE *fp;
 
-    long long origin;
-
+    uint32_t origin;
 };
 
 void *
@@ -51,8 +50,8 @@ int
 uart_frame_parser_buffer_read(void *buffer, uint32_t offset, uint8_t *data, uint32_t size) {
     fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
     long filesize = ftell(((struct uart_frame_parser_buffer*)buffer)->fp);
-    if (filesize >= ((struct uart_frame_parser_buffer*)buffer)->origin + offset + size) {
-        fseek(((struct uart_frame_parser_buffer*)buffer)->fp, ((struct uart_frame_parser_buffer*)buffer)->origin + offset, SEEK_SET);
+    if (filesize >= (long)(((struct uart_frame_parser_buffer*)buffer)->origin + offset + size)) {
+        fseek(((struct uart_frame_parser_buffer*)buffer)->fp, ((long)((struct uart_frame_parser_buffer*)buffer)->origin) + offset, SEEK_SET);
         assert(fread(data, 1, size, ((struct uart_frame_parser_buffer*)buffer)->fp) == size);
         return 1;
     }

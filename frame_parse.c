@@ -229,7 +229,7 @@ int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data,
         int frame_bytes = next_frame(parser->frame_definition_head, parser->detected_frame_head, &field_data_head,
                                      &frame_definition, parser->buffer, 0, 0, parser->on_error);
         if (frame_bytes > 0) {
-            if (frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
+            if ((uint32_t)frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
                 parser->on_data(parser->buffer, frame_definition, field_data_head, user_ptr);
                 uart_frame_parser_buffer_increase_origin(parser->buffer, frame_bytes);
             } else {
