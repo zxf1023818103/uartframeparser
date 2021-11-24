@@ -90,6 +90,48 @@ struct uart_frame_parser_expression {
     struct uart_frame_parser_expression_result *result;
 };
 
+static void set_buffer(lua_State* L, void* buffer) {
+    lua_pushlightuserdata(L, (void*)BUFFER_INDEX);
+    lua_pushlightuserdata(L, buffer);
+    lua_settable(L, LUA_REGISTRYINDEX);
+}
+
+static void* get_buffer(lua_State* L) {
+    lua_pushlightuserdata(L, (void*)BUFFER_INDEX);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    void* buffer = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    return buffer;
+}
+
+static void set_offset(lua_State* L, lua_Integer offset) {
+    lua_pushlightuserdata(L, (void*)OFFSET_INDEX);
+    lua_pushinteger(L, offset);
+    lua_settable(L, LUA_REGISTRYINDEX);
+}
+
+static lua_Integer get_offset(lua_State* L) {
+    lua_pushlightuserdata(L, (void*)OFFSET_INDEX);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_Integer offset = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    return offset;
+}
+
+static void set_error_callback(lua_State* L, uart_frame_parser_error_callback_t on_error) {
+    lua_pushlightuserdata(L, (void*)ERROR_CALLBACK_INDEX);
+    lua_pushlightuserdata(L, on_error);
+    lua_settable(L, LUA_REGISTRYINDEX);
+}
+
+static uart_frame_parser_error_callback_t get_error_callback(lua_State* L) {
+    lua_pushlightuserdata(L, (void*)ERROR_CALLBACK_INDEX);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    uart_frame_parser_error_callback_t on_error = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    return on_error;
+}
+
 /// <summary>
 /// 表达式中 byte() 函数的实现，供表达式访问帧缓冲指定下标的字节。执行前栈顶需压入要访问的表达式下标，执行后下标出栈，压入该下标对应的字节并返回。
 /// 若出错，压入错误码并调用错误回调函数，引发异常。
@@ -97,27 +139,17 @@ struct uart_frame_parser_expression {
 /// <param name="L">函数被调用时的 Lua 状态机</param>
 /// <returns>该 Lua 函数返回的结果个数</returns>
 static int l_byte(lua_State *L) {
-    lua_pushlightuserdata(L, (void *) ERROR_CALLBACK_INDEX);
-    lua_gettable(L, LUA_REGISTRYINDEX);
-    uart_frame_parser_error_callback_t on_error = lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    uart_frame_parser_error_callback_t on_error = get_error_callback(L);
 
     if (lua_gettop(L) == 1) {
         int is_num;
         lua_Integer index = lua_tointegerx(L, -1, &is_num);
         if (is_num) {
             if (index > 0) {
-                lua_pushlightuserdata(L, (void *) OFFSET_INDEX);
-                lua_gettable(L, LUA_REGISTRYINDEX);
-                lua_Integer offset = lua_tointeger(L, -1);
-                lua_pop(L, 1);
+                lua_Integer offset = get_offset(L);
+                void* buffer = get_buffer(L);
 
-                lua_pushlightuserdata(L, (void *) BUFFER_INDEX);
-                lua_gettable(L, LUA_REGISTRYINDEX);
-                struct uart_frame_parser_buffer *buffer = lua_touserdata(L, -1);
-                lua_pop(L, 1);
-
-                int byte = uart_frame_parser_buffer_at(buffer, index + offset - 1);
+                int byte = uart_frame_parser_buffer_at(buffer, (uint32_t)(index + offset - 1));
                 lua_pushinteger(L, byte);
                 if (byte >= 0) {
                     return 1;
@@ -191,13 +223,9 @@ static lua_State *lua_state_create(struct uart_frame_parser_buffer *buffer, cons
             }
         }
 
-        lua_pushlightuserdata(L, (void *) BUFFER_INDEX);
-        lua_pushlightuserdata(L, buffer);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        set_buffer(L, buffer);
 
-        lua_pushlightuserdata(L, (void *) ERROR_CALLBACK_INDEX);
-        lua_pushlightuserdata(L, on_error);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        set_error_callback(L, on_error);
 
         return L;
     } else {
@@ -462,7 +490,7 @@ static int handle_default_expression_result(lua_State *L, int status, int result
             int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
             if (ret > 0) {
                 expression->result->type = expression->type;
-                expression->result->byte_array_size = len;
+                expression->result->byte_array_size = (uint32_t)len;
                 memcpy(expression->result->byte_array, data, len);
                 return 1;
             } else {
@@ -492,7 +520,7 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
             const char *string = lua_tolstring(L, -1, &len);
             int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
             if (ret > 0) {
-                expression->result->byte_array_size = len;
+                expression->result->byte_array_size = (uint32_t)len;
                 memcpy(expression->result->byte_array, string, len);
                 expression->result->type = expression->type;
                 return 1;
@@ -520,17 +548,23 @@ uart_frame_parser_expression_get_result(struct uart_frame_parser_expression *exp
     return expression->result;
 }
 
+static int expression_loaded(struct uart_frame_parser_expression* expression) {
+    return expression->expression_engine->last_expression == expression;
+}
+
+static void load_expression(lua_State* L, struct uart_frame_parser_expression* expression) {
+    lua_settop(L, 0);
+    lua_load(L, do_read_bytecode, expression, expression->name, NULL);
+    expression->expression_engine->last_expression = expression;
+}
+
 int uart_frame_parser_expression_eval(struct uart_frame_parser_expression *expression, uint32_t offset) {
     lua_State *L = expression->expression_engine->L;
 
-    lua_pushlightuserdata(L, (void *) OFFSET_INDEX);
-    lua_pushinteger(L, offset);
-    lua_settable(L, LUA_REGISTRYINDEX);
+    set_offset(L, offset);
 
-    if (expression->expression_engine->last_expression != expression) {
-        lua_settop(L, 0);
-        lua_load(L, do_read_bytecode, expression, expression->name, NULL);
-        expression->expression_engine->last_expression = expression;
+    if (!expression_loaded(expression)) {
+        load_expression(L, expression);
     }
 
     int ret = -9;
