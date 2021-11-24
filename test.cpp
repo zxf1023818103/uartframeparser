@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "uartframeparser.h"
 #include <string>
+#include <stdarg.h>
 #include <cjson/cJSON.h>
 
 extern "C" {
@@ -130,12 +131,12 @@ namespace {
                     "bytes": 2,
                     "name": "sof",
                     "default": "return '\\x55\\xaa'",
-                    "description": "帧头"
+                    "description": "Start of Frame"
                 },
                 {
                     "bytes": 1,
                     "name": "length",
-                    "description": "长度"
+                    "description": "Length of Frame"
                 },
                 {
                     "bytes": "return byte(3) - 4",
@@ -144,43 +145,44 @@ namespace {
                 },
                 {
                     "bytes": 1,
-                    "name": "checksum"
+                    "name": "checksum",
+                    "description": "Checksum"
                 }
             ],
             "validator": "return byte(1) == 0x55 and byte(2) == 0xaa and byte(byte(3)) == (sum(1, byte(3) - 1) & 0xff)"
         },
         {
             "name": "subframe1",
-            "description": "子帧格式1",
+            "description": "Subframe 1",
             "fields": [
                 {
                     "bytes": 1,
                     "name": "sof",
-                    "description": "帧头",
+                    "description": "Start of Frame",
                     "default": "return '\\x01'"
                 },
                 {
                     "bytes": 1,
                     "name": "working_status",
-                    "description": "工作状态"
+                    "description": "Working status"
                 }
             ],
             "validator": "return byte(1) == 0x01"
         },
         {
             "name": "subframe2",
-            "description": "子帧格式2",
+            "description": "Subframe 2",
             "fields": [
                 {
                     "bytes": 1,
                     "name": "sof",
-                    "description": "帧头",
+                    "description": "Start of Frame",
                     "default": "return '\\x02'"
                 },
                 {
                     "bytes": 1,
                     "name": "fan_status",
-                    "description": "风机状态"
+                    "description": "Fan status"
                 }
             ],
             "validator": "return byte(1) == 0x02"

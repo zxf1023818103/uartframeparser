@@ -24,7 +24,7 @@ if (${GTEST_FOUND})
     add_executable(basic_function_test "test.cpp")
 
     target_include_directories(basic_function_test PRIVATE ${GTEST_INCLUDE_DIR})
-    target_link_libraries(basic_function_test PRIVATE ${GTEST_LIBRARIES} uartframeparser)
+    target_link_libraries(basic_function_test PRIVATE GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main uartframeparser)
 
     enable_testing()
     add_test(NAME basic_function_test COMMAND basic_function_test)

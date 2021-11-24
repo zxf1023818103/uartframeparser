@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <strings.h>
+#include <string.h>
 
 /// <summary>
 /// 自定义用户数据在 Lua 注册表中的下标
@@ -72,7 +72,7 @@ struct uart_frame_parser_expression {
     /// <summary>
     /// 指向字节码起始位置
     /// </summary>
-    void *data;
+    uint8_t *data;
 
     /// <summary>
     /// 字节码长度
@@ -256,12 +256,14 @@ static int do_write_bytecode(lua_State *L, const void *data, size_t data_size, v
 
     struct uart_frame_parser_expression *expression = ud;
 
-    expression->data = realloc(expression->data, expression->data_size + data_size);
+    uint8_t* old_data = expression->data;
+    expression->data = realloc(old_data, expression->data_size + data_size);
     if (expression->data) {
         memcpy(expression->data + expression->data_size, data, data_size);
         expression->data_size += data_size;
         return 0;
     } else {
+        free(old_data);
         return LUA_ERRMEM;
     }
 }
@@ -373,11 +375,13 @@ static const char *do_read_bytecode(lua_State *L, void *ud, size_t *ptr_data_siz
 
 static int expression_result_create(struct uart_frame_parser_expression_result **ptr_result, size_t byte_array_size,
                                     uart_frame_parser_error_callback_t on_error) {
-    *ptr_result = realloc(*ptr_result,
+    struct uart_frame_parser_expression_result* old_result = *ptr_result;
+    *ptr_result = realloc(old_result,
                           offsetof(struct uart_frame_parser_expression_result, byte_array) + byte_array_size);
     if (*ptr_result) {
         return 1;
     } else {
+        free(old_result);
         on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "allocate a expression result failed");
         return -6;
     }
@@ -529,7 +533,7 @@ int uart_frame_parser_expression_eval(struct uart_frame_parser_expression *expre
         expression->expression_engine->last_expression = expression;
     }
 
-    int ret;
+    int ret = -9;
     int status = lua_pcall(L, 0, 1, 0);
     int result_type = lua_type(L, lua_gettop(L));
     switch (expression->type) {

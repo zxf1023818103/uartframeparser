@@ -68,13 +68,10 @@ struct uart_frame_parser_expression_result {
 
         long long integer;
 
-        struct {
-
-            uint32_t byte_array_size;
-
-            uint8_t byte_array[1];
-        };
+        uint32_t byte_array_size;
     };
+
+    uint8_t byte_array[1];
 };
 
 /// <summary>
