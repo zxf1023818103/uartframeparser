@@ -157,17 +157,23 @@ parse_frame_bitfield_node(cJSON *bitfield_node, uint32_t offset_bits,
             bitfield_attribute_node = bitfield_attribute_node->next;
         }
 
-        struct uart_frame_bitfield_definition *bitfield_definition = calloc(1,
-                                                                            sizeof(struct uart_frame_bitfield_definition));
-        if (bitfield_definition) {
-            bitfield_definition->name = name;
-            bitfield_definition->description = description;
-            bitfield_definition->offset_bits = offset_bits;
-            bitfield_definition->bits = bits;
+        if (bits) {
+            struct uart_frame_bitfield_definition* bitfield_definition = calloc(1,
+                sizeof(struct uart_frame_bitfield_definition));
+            if (bitfield_definition) {
+                bitfield_definition->name = name;
+                bitfield_definition->description = description;
+                bitfield_definition->offset_bits = offset_bits;
+                bitfield_definition->bits = bits;
 
-            return bitfield_definition;
-        } else {
-            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a bitfield definition");
+                return bitfield_definition;
+            }
+            else {
+                on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a bitfield definition");
+            }
+        }
+        else {
+            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "bitfield length is 0");
         }
     } else {
         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "bitfield is not an object: %s",
