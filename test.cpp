@@ -85,37 +85,37 @@ static cJSON *stringify_binary_data(void *buffer, uint32_t data_size, uint32_t o
     return hex_data_node;
 }
 
-static cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_data *field_data_head, uint32_t offset) {
+static cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_info *field_info_head, uint32_t offset) {
     cJSON *frame_data = cJSON_CreateObject();
     cJSON_AddStringToObject(frame_data, "name", frame_definition->name);
     cJSON_AddStringToObject(frame_data, "description", frame_definition->description);
     cJSON *data = cJSON_CreateArray();
 
     uint32_t field_offset = offset;
-    for (struct uart_frame_field_data *field_data = field_data_head;
-         field_data != NULL; field_data = field_data->next) {
-        cJSON *field_data_node = cJSON_CreateObject();
+    for (struct uart_frame_field_info *field_info = field_info_head;
+         field_info != NULL; field_info = field_info->next) {
+        cJSON *field_info_node = cJSON_CreateObject();
 
-        cJSON_AddStringToObject(field_data_node, "name", field_data->field_definition->name);
-        cJSON_AddStringToObject(field_data_node, "description", field_data->field_definition->description);
-        cJSON_AddNumberToObject(field_data_node, "length", field_data->data_size);
+        cJSON_AddStringToObject(field_info_node, "name", field_info->field_definition->name);
+        cJSON_AddStringToObject(field_info_node, "description", field_info->field_definition->description);
+        cJSON_AddNumberToObject(field_info_node, "length", field_info->data_size);
 
-        if (field_data->field_definition->has_bitfields) {
-            cJSON *bitfields_data = stringify_bitfields_data(buffer, field_data->field_definition->bitfield_definition_head, field_data->data_size, field_offset);
+        if (field_info->field_definition->has_bitfields) {
+            cJSON *bitfields_data = stringify_bitfields_data(buffer, field_info->field_definition->bitfield_definition_head, field_info->data_size, field_offset);
             cJSON_AddItemToObject(bitfields_data, "bitfields",  bitfields_data);
         }
-        else if (field_data->field_definition->has_subframes) {
-            cJSON *subframe_data = stringify_frame_data(buffer, field_data->subframe_definition, field_data->subframe_field_data, field_offset);
-            cJSON_AddItemToObject(field_data_node, "subframe", subframe_data);
+        else if (field_info->field_definition->has_subframes) {
+            cJSON *subframe_data = stringify_frame_data(buffer, field_info->subframe_definition, field_info->subframe_field_info, field_offset);
+            cJSON_AddItemToObject(field_info_node, "subframe", subframe_data);
         }
         else {
-            cJSON *hex_data = stringify_binary_data(buffer, field_data->data_size, field_offset);
-            cJSON_AddItemToObject(field_data_node, "hex", hex_data);
+            cJSON *hex_data = stringify_binary_data(buffer, field_info->data_size, field_offset);
+            cJSON_AddItemToObject(field_info_node, "hex", hex_data);
         }
 
-        cJSON_AddItemToArray(data, field_data_node);
+        cJSON_AddItemToArray(data, field_info_node);
 
-        field_offset += field_data->data_size;
+        field_offset += field_info->data_size;
     }
 
     cJSON_AddItemToObject(frame_data, "data", data);
@@ -221,11 +221,11 @@ namespace {
         free(format);
     }
 
-    void on_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_data *field_data_head,
+    void on_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_info *field_info_head,
                 void *user_ptr) {
         *(int *) user_ptr = 1;
 
-        cJSON *data = stringify_frame_data(buffer, frame_definition, field_data_head, 0);
+        cJSON *data = stringify_frame_data(buffer, frame_definition, field_info_head, 0);
 
         const char *result = cJSON_Print(data);
 

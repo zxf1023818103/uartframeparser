@@ -224,11 +224,11 @@ struct uart_frame_bitfield_definition {
 /// <summary>
 /// 帧字段数据
 /// </summary>
-struct uart_frame_field_data {
+struct uart_frame_field_info {
     /// <summary>
     /// 指向下一个帧字段数据起始位置
     /// </summary>
-    struct uart_frame_field_data *next;
+    struct uart_frame_field_info *next;
 
     /// <summary>
     /// 对应的帧字段信息
@@ -243,7 +243,7 @@ struct uart_frame_field_data {
     /// <summary>
     /// 包含的子帧数据
     /// </summary>
-    struct uart_frame_field_data *subframe_field_data;
+    struct uart_frame_field_info *subframe_field_info;
 
     /// <summary>
     /// 包含的子帧定义
@@ -263,7 +263,7 @@ typedef void (*uart_frame_parser_error_callback_t)(enum uart_frame_parser_error_
 /// <param name="frame_data">指向解析出的帧数据</param>
 /// <param name="user_ptr">用户传入的自定义参数</param>
 typedef void (*uart_frame_parser_data_callback_t)(void *buffer, struct uart_frame_definition *frame_definition,
-                                                 struct uart_frame_field_data *field_data_head, void *user_ptr);
+                                                 struct uart_frame_field_info *field_info_head, void *user_ptr);
 
 /// <summary>
 /// 帧解析器信息
@@ -299,7 +299,7 @@ struct uart_frame_parser {
     /// </summary>
     struct uart_frame_detected_frame *detected_frame_head;
 
-    struct uart_frame_field_data *last_field_data_head;
+    struct uart_frame_field_info *last_field_info_head;
 
     struct uart_frame_definition *last_frame_definition;
 
