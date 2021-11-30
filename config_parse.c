@@ -108,49 +108,104 @@ parse_detected_frames_node(cJSON *detected_frames_node, uart_frame_parser_error_
 
 static struct uart_frame_bitfield_definition *
 parse_frame_bitfield_node(cJSON *bitfield_node, uint32_t offset_bits,
-                          struct uart_frame_parser_expression_engine *expression_engine, uart_frame_parser_error_callback_t on_error) {
+                          struct uart_frame_parser_expression_engine *expression_engine,
+                          uart_frame_parser_error_callback_t on_error) {
     if (cJSON_IsObject(bitfield_node)) {
         cJSON *bitfield_attribute_node = bitfield_node->child;
         char *name = NULL;
         char *description = NULL;
-        struct uart_frame_parser_expression *default_expression = NULL;
+        struct uart_frame_parser_expression* default_expression = NULL;
+        struct uart_frame_parser_expression* tostring_expression = NULL;
         uint32_t bits = 0;
         while (bitfield_attribute_node) {
             if (strcmp(bitfield_attribute_node->string, "name") == 0) {
-                if (cJSON_IsString(bitfield_attribute_node)) {
-                    name = bitfield_attribute_node->valuestring;
-                } else {
+                if (!name) {
+                    if (cJSON_IsString(bitfield_attribute_node)) {
+                        name = bitfield_attribute_node->valuestring;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "bitfield name is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "bitfield name is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        "duplicated bitfield name node: %s", cJSON_Print(bitfield_attribute_node));
                 }
             } else if (strcmp(bitfield_attribute_node->string, "description") == 0) {
-                if (cJSON_IsString(bitfield_attribute_node)) {
-                    description = bitfield_attribute_node->valuestring;
-                } else {
+                if (!description) {
+                    if (cJSON_IsString(bitfield_attribute_node)) {
+                        description = bitfield_attribute_node->valuestring;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "bitfield description is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "bitfield description is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        "duplicated bitfield description node: %s", cJSON_Print(bitfield_attribute_node));
                 }
             } else if (strcmp(bitfield_attribute_node->string, "default") == 0) {
-                if (cJSON_IsString(bitfield_attribute_node)) {
-                    default_expression = uart_frame_parser_expression_create(expression_engine, NULL,
-                                                                             EXPRESSION_DEFAULT_VALUE,
-                                                                             bitfield_attribute_node->valuestring,
-                                                                             NULL);
-                    if (!default_expression) {
-                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "bitfield default expression is invalid: %s", bitfield_attribute_node->valuestring);
-                        return NULL;
+                if (default_expression) {
+                    if (cJSON_IsString(bitfield_attribute_node)) {
+                        default_expression = uart_frame_parser_expression_create(expression_engine, NULL,
+                            EXPRESSION_DEFAULT_VALUE,
+                            bitfield_attribute_node->valuestring,
+                            NULL);
+                        if (!default_expression) {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "bitfield default expression is invalid: %s", bitfield_attribute_node->valuestring);
+                            goto err;
+                        }
                     }
-                } else {
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "bitfield default expression is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "bitfield default is not a string: %s", cJSON_Print(bitfield_attribute_node));
+                        "duplicated bitfield default expression node: %s", cJSON_Print(bitfield_attribute_node));
                 }
             } else if (strcmp(bitfield_attribute_node->string, "bits") == 0) {
-                if (cJSON_IsNumber(bitfield_attribute_node)) {
-                    bits = bitfield_attribute_node->valueint;
-                } else {
+                if (!bits) {
+                    if (cJSON_IsNumber(bitfield_attribute_node)) {
+                        bits = bitfield_attribute_node->valueint;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "bitfield bits is not an integer: %s", cJSON_Print(bitfield_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "bitfield bits is not an integer: %s", cJSON_Print(bitfield_attribute_node));
+                        "duplicated bitfield length node: %s", cJSON_Print(bitfield_attribute_node));
+                }
+            }
+            else if (strcmp(bitfield_attribute_node->string, "tostring") == 0) {
+                if (!tostring_expression) {
+                    if (cJSON_IsString(bitfield_attribute_node)) {
+                        tostring_expression = uart_frame_parser_expression_create(expression_engine, NULL, EXPRESSION_TOSTRING, bitfield_attribute_node->valuestring, NULL);
+                        if (!tostring_expression) {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "bitfield decode expression is invalid: %s", bitfield_attribute_node->valuestring);
+                            goto err;
+                        }
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "bitfield decode expression is not a string: % s", cJSON_Print(bitfield_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
+                    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                        "duplicated bitfield tostring node: %s", cJSON_Print(bitfield_attribute_node));
                 }
             }
 
@@ -175,6 +230,10 @@ parse_frame_bitfield_node(cJSON *bitfield_node, uint32_t offset_bits,
         else {
             on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "bitfield length is 0");
         }
+
+    err:
+        uart_frame_parser_expression_release(expression_engine, tostring_expression);
+        uart_frame_parser_expression_release(expression_engine, default_expression);
     } else {
         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "bitfield is not an object: %s",
                  cJSON_Print(bitfield_node));
@@ -227,56 +286,85 @@ static struct uart_frame_field_definition *
 parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_engine *expression_engine,
                        uart_frame_parser_error_callback_t on_error) {
     if (cJSON_IsObject(field_node)) {
-        cJSON *bitfields_node = NULL;
-        cJSON *subframes_node = NULL;
         struct uart_frame_parser_expression *tostring_expression = NULL;
         char *name = NULL;
         char *description = NULL;
         struct uart_frame_parser_expression *length_expression = NULL;
         uint32_t length_value = 0;
         struct uart_frame_parser_expression *default_value_expression = NULL;
+        struct uart_frame_bitfield_definition* bitfield_definition_head = NULL;
+        struct uart_frame_detected_frame* detected_subframe_head = NULL;
 
         cJSON *field_attribute_node = field_node->child;
         while (field_attribute_node) {
             if (strcmp("name", field_attribute_node->string) == 0) {
-                if (cJSON_IsString(field_attribute_node)) {
-                    name = field_attribute_node->valuestring;
-                } else {
-                    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "field name is not a string: %s",
-                             cJSON_Print(field_attribute_node));
-                    goto err;
+                if (!name) {
+                    if (cJSON_IsString(field_attribute_node)) {
+                        name = field_attribute_node->valuestring;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "field name is not a string: %s",
+                            cJSON_Print(field_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
+                    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                        "duplicated field name node: %s", cJSON_Print(field_attribute_node));
                 }
             } else if (strcmp("description", field_attribute_node->string) == 0) {
-                if (cJSON_IsString(field_attribute_node)) {
-                    description = field_attribute_node->valuestring;
-                } else {
+                if (!description) {
+                    if (cJSON_IsString(field_attribute_node)) {
+                        description = field_attribute_node->valuestring;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "field description is not a string: %s", cJSON_Print(field_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "field description is not a string: %s", cJSON_Print(field_attribute_node));
-                    goto err;
+                        "duplicated field description node: %s", cJSON_Print(field_attribute_node));
                 }
             } else if (strcmp("bytes", field_attribute_node->string) == 0) {
                 if (cJSON_IsString(field_attribute_node)) {
-                    if (length_expression == NULL) {
-                        length_expression = uart_frame_parser_expression_create(expression_engine, NULL,
-                                                                                EXPRESSION_LENGTH,
-                                                                                field_attribute_node->valuestring,
-                                                                                NULL);
-                        if (!length_expression) {
-                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                     "field length expression is invalid: %s",
-                                     field_attribute_node->valuestring);
-                            goto err;
+                    if (!length_value) {
+                        if (length_expression == NULL) {
+                            length_expression = uart_frame_parser_expression_create(expression_engine, NULL,
+                                EXPRESSION_LENGTH,
+                                field_attribute_node->valuestring,
+                                NULL);
+                            if (!length_expression) {
+                                on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                    "field length expression is invalid: %s",
+                                    field_attribute_node->valuestring);
+                                goto err;
+                            }
                         }
-                    } else {
-                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "duplicated field byte node: %s",
-                                 cJSON_Print(field_attribute_node));
+                        else {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "duplicated field byte node: %s",
+                                cJSON_Print(field_attribute_node));
+                        }
                     }
-                } else if (cJSON_IsNumber(field_attribute_node)) {
-                    length_value = field_attribute_node->valueint;
-                } else {
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "duplicated field length node: %s", cJSON_Print(field_attribute_node));
+                    }
+                }
+                else if (cJSON_IsNumber(field_attribute_node)) {
+                    if (!length_expression) {
+                        length_value = field_attribute_node->valueint;
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "duplicated field length node: %s", cJSON_Print(field_attribute_node));
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "field description is not a string or number: %s", cJSON_Print(field_attribute_node));
+                             "field length is not a string or number: %s", cJSON_Print(field_attribute_node));
                     goto err;
                 }
             } else if (strcmp("default", field_attribute_node->string) == 0) {
@@ -296,37 +384,43 @@ parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_en
                     goto err;
                 }
             } else if (strcmp("frames", field_attribute_node->string) == 0) {
-                subframes_node = field_attribute_node;
+                
+                detected_subframe_head = parse_detected_frames_node(field_attribute_node, on_error);
+
             } else if (strcmp("bitfields", field_attribute_node->string) == 0) {
-                bitfields_node = field_attribute_node;
+                
+                bitfield_definition_head = parse_frame_bitfields_node(field_attribute_node, expression_engine, on_error);
+
             } else if (strcmp("tostring", field_attribute_node->string) == 0) {
-                if (cJSON_IsString(field_attribute_node)) {
-                    if (tostring_expression == NULL) {
+                if (!tostring_expression) {
+                    if (cJSON_IsString(field_attribute_node)) {
                         tostring_expression = uart_frame_parser_expression_create(expression_engine,
-                                                                                  NULL,
-                                                                                  EXPRESSION_TOSTRING,
-                                                                                  field_attribute_node->valuestring,
-                                                                                  NULL);
+                            NULL,
+                            EXPRESSION_TOSTRING,
+                            field_attribute_node->valuestring,
+                            NULL);
                         if (!tostring_expression) {
                             on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                     "field tostring expression is invalid: %s",
-                                     field_attribute_node->valuestring);
+                                "field tostring expression is invalid: %s",
+                                field_attribute_node->valuestring);
                             goto err;
                         }
-                    } else {
-                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "duplicated field tostring node: %s",
-                                 cJSON_Print(field_attribute_node));
+
                     }
-                } else {
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "field tostring is not a string: %s", cJSON_Print(field_attribute_node));
+                        goto err;
+                    }
+                }
+                else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "field tostring is not a string: %s", cJSON_Print(field_attribute_node));
-                    goto err;
+                        "duplicated field tostring node: %s",
+                        cJSON_Print(field_attribute_node));
                 }
             } else {
                 on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
                          "unknown field definition attribute: %s", cJSON_Print(field_attribute_node));
-                goto err;
             }
 
             field_attribute_node = field_attribute_node->next;
@@ -338,14 +432,14 @@ parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_en
             goto err;
         }
 
-        if ((bitfields_node || subframes_node) && (tostring_expression || default_value_expression)) {
+        if ((bitfield_definition_head || detected_subframe_head) && (tostring_expression || default_value_expression)) {
             on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
                      "exclusive field attributes tostring/default and bitfields/subframes: %s",
                      cJSON_Print(field_node));
             goto err;
         }
 
-        if (bitfields_node && subframes_node) {
+        if (bitfield_definition_head && detected_subframe_head) {
             on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
                      "exclusive field attribute bitfields and frames: %s", cJSON_Print(field_node));
             goto err;
@@ -363,35 +457,31 @@ parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_en
             field_definition.length.value = length_value;
         }
 
-        if (bitfields_node) {
-            struct uart_frame_bitfield_definition *bitfield_definition_head = parse_frame_bitfields_node(bitfields_node,
-                                                                                                         expression_engine,
-                                                                                                         on_error);
-            if (bitfield_definition_head) {
-                field_definition.has_bitfields = 1;
-                field_definition.bitfield_definition_head = bitfield_definition_head;
-            } else {
-                goto err;
-            }
-        } else if (subframes_node) {
-            struct uart_frame_detected_frame *detected_subframe_head = parse_detected_frames_node(subframes_node,
-                                                                                                  on_error);
-            if (detected_subframe_head) {
-                field_definition.has_subframes = 1;
-                field_definition.detected_subframe_head = detected_subframe_head;
-            } else {
-                goto err;
-            }
+        
+        if (bitfield_definition_head) {
+            field_definition.has_bitfields = 1;
+            field_definition.bitfield_definition_head = bitfield_definition_head;
+        } else if (detected_subframe_head) {
+            field_definition.has_subframes = 1;
+            field_definition.detected_subframe_head = detected_subframe_head;
         } else {
             field_definition.default_value_expression = default_value_expression;
             field_definition.tostring_expression = tostring_expression;
         }
 
         struct uart_frame_field_definition *ptr_field_definition = malloc(sizeof field_definition);
-        *ptr_field_definition = field_definition;
-        return ptr_field_definition;
+        if (ptr_field_definition) {
+            *ptr_field_definition = field_definition;
+            return ptr_field_definition;
+        }
+        else {
+            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
+                "cannot allocate a field definition");
+        }
 
-        err:
+    err:
+        uart_frame_bitfield_definition_release(bitfield_definition_head);
+        uart_frame_detected_frame_release(detected_subframe_head);
         uart_frame_parser_expression_release(expression_engine, tostring_expression);
         uart_frame_parser_expression_release(expression_engine, default_value_expression);
         uart_frame_parser_expression_release(expression_engine, length_expression);
@@ -450,36 +540,71 @@ parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expressio
             char *name = NULL;
             char *description = NULL;
             struct uart_frame_parser_expression *validator_expression = NULL;
-            cJSON *fields_node = NULL;
+            struct uart_frame_field_definition* field_definition_head = NULL;
 
             while (definition_attribute_node) {
                 if (strcmp("name", definition_attribute_node->string) == 0) {
-                    if (cJSON_IsString(definition_attribute_node)) {
-                        name = definition_attribute_node->valuestring;
-                    } else if (!cJSON_IsNull(definition_attribute_node)) {
+                    if (!name) {
+                        if (cJSON_IsString(definition_attribute_node)) {
+                            name = definition_attribute_node->valuestring;
+                        }
+                        else {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "frame definition name is not a string: %s", cJSON_Print(definition_attribute_node));
+                            goto err;
+                        }
+                    }
+                    else {
                         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "frame definition name is not a string: %s", cJSON_Print(definition_attribute_node));
+                            "duplicated frame definition name node: %s", cJSON_Print(definition_attribute_node));
                     }
                 } else if (strcmp("description", definition_attribute_node->string) == 0) {
-                    if (cJSON_IsString(definition_attribute_node)) {
-                        description = definition_attribute_node->valuestring;
-                    } else if (!cJSON_IsNull(definition_attribute_node)) {
+                    if (!description) {
+                        if (cJSON_IsString(definition_attribute_node)) {
+                            description = definition_attribute_node->valuestring;
+                        }
+                        else {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "frame description is not a string: %s", cJSON_Print(definition_attribute_node));
+                            goto err;
+                        }
+                    }
+                    else {
                         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "frame description is not a string: %s", cJSON_Print(definition_attribute_node));
+                            "duplicated frame definition description node: %s", cJSON_Print(definition_attribute_node));
                     }
                 } else if (strcmp("validator", definition_attribute_node->string) == 0) {
-                    if (cJSON_IsString(definition_attribute_node)) {
-                        validator_expression = uart_frame_parser_expression_create(expression_engine,
-                                                                                   NULL,
-                                                                                   EXPRESSION_VALIDATOR,
-                                                                                   definition_attribute_node->valuestring,
-                                                                                   NULL);
-                    } else if (!cJSON_IsNull(definition_attribute_node)) {
+                    if (!validator_expression) {
+                        if (cJSON_IsString(definition_attribute_node)) {
+                            validator_expression = uart_frame_parser_expression_create(expression_engine,
+                                NULL,
+                                EXPRESSION_VALIDATOR,
+                                definition_attribute_node->valuestring,
+                                NULL);
+                            if (!validator_expression) {
+                                on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                    "invalid validator expression: %s", definition_attribute_node->valuestring);
+                                goto err;
+                            }
+                        }
+                        else {
+                            on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                                "frame validator is not a string: %s", cJSON_Print(definition_attribute_node));
+                            goto err;
+                        }
+                    }
+                    else {
                         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                                 "frame validator is not a string: %s", cJSON_Print(definition_attribute_node));
+                            "duplicated frame definition validator expression node: %s", cJSON_Print(definition_attribute_node));
                     }
                 } else if (strcmp("fields", definition_attribute_node->string) == 0) {
-                    fields_node = definition_attribute_node;
+                    if (!field_definition_head) {
+                        field_definition_head = parse_frame_fields_node(definition_attribute_node, expression_engine, on_error);
+                    }
+                    else {
+                        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                            "duplicated frame field definitions: %s", cJSON_Print(definition_attribute_node));
+                    }
                 } else {
                     on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
                              "unknown field definition attributes: %s", cJSON_Print(definition_attribute_node));
@@ -488,26 +613,28 @@ parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expressio
                 definition_attribute_node = definition_attribute_node->next;
             }
 
-            if (name) {
-                struct uart_frame_field_definition *field_head = parse_frame_fields_node(fields_node, expression_engine,
-                                                                                         on_error);
-                if (field_head) {
-                    struct uart_frame_definition *frame_definition = calloc(1, sizeof(struct uart_frame_definition));
-                    if (frame_definition) {
-                        frame_definition->name = name;
-                        frame_definition->description = description;
-                        frame_definition->validator_expression = validator_expression;
-                        frame_definition->field_head = field_head;
-                        return frame_definition;
-                    } else {
-                        on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
-                                 "cannot allocate a frame definition");
-                    }
+            if (name && field_definition_head) {
+                struct uart_frame_definition *frame_definition = calloc(1, sizeof(struct uart_frame_definition));
+                if (frame_definition) {
+                    frame_definition->name = name;
+                    frame_definition->description = description;
+                    frame_definition->validator_expression = validator_expression;
+                    frame_definition->field_head = field_definition_head;
+                    return frame_definition;
+                } else {
+                    on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
+                             "cannot allocate a frame definition");
+                    goto err;
                 }
             } else {
-                on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "frame definition name is null: %s",
+                on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "frame definition name or field definitions is null: %s",
                          cJSON_Print(definition_node));
+                goto err;
             }
+
+        err:
+            uart_frame_parser_expression_release(expression_engine, validator_expression);
+            uart_frame_field_definition_release(field_definition_head);
         } else {
             on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "frame definition is empty: %s",
                      cJSON_Print(definition_node));
