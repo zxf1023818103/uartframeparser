@@ -50,6 +50,7 @@ parse_field(struct uart_frame_field_definition *field_definition, struct uart_fr
             }
 
             field_info->field_definition = field_definition;
+            field_info->offset = field_offset + offset;
             field_info->data_size = length;
             field_info->subframe_field_info = subframe_field_info;
             field_info->subframe_definition = subframe_definition;

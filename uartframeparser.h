@@ -216,6 +216,11 @@ struct uart_frame_bitfield_definition {
     char *description;
 
     /// <summary>
+    /// 位字段偏移量
+    /// </summary>
+    uint32_t offset_bits;
+
+    /// <summary>
     /// 位字段长度
     /// </summary>
     uint32_t bits;
@@ -234,6 +239,11 @@ struct uart_frame_field_info {
     /// 对应的帧字段信息
     /// </summary>
     struct uart_frame_field_definition *field_definition;
+
+    /// <summary>
+    /// 帧字段偏移量
+    /// </summary>
+    uint32_t offset;
 
     /// <summary>
     /// 帧字段长度

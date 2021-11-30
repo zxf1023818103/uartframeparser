@@ -107,8 +107,8 @@ parse_detected_frames_node(cJSON *detected_frames_node, uart_frame_parser_error_
 }
 
 static struct uart_frame_bitfield_definition *
-parse_frame_bitfield_node(cJSON *bitfield_node, struct uart_frame_parser_expression_engine *expression_engine,
-                          uart_frame_parser_error_callback_t on_error) {
+parse_frame_bitfield_node(cJSON *bitfield_node, uint32_t offset_bits,
+                          struct uart_frame_parser_expression_engine *expression_engine, uart_frame_parser_error_callback_t on_error) {
     if (cJSON_IsObject(bitfield_node)) {
         cJSON *bitfield_attribute_node = bitfield_node->child;
         char *name = NULL;
@@ -162,6 +162,7 @@ parse_frame_bitfield_node(cJSON *bitfield_node, struct uart_frame_parser_express
         if (bitfield_definition) {
             bitfield_definition->name = name;
             bitfield_definition->description = description;
+            bitfield_definition->offset_bits = offset_bits;
             bitfield_definition->bits = bits;
 
             return bitfield_definition;
@@ -184,10 +185,10 @@ parse_frame_bitfields_node(cJSON *bitfields_node, struct uart_frame_parser_expre
         if (bitfield_node) {
             struct uart_frame_bitfield_definition *bitfield_definition_head = NULL;
             struct uart_frame_bitfield_definition *bitfield_definition_cur = NULL;
+            uint32_t offset_bits = 0;
             while (bitfield_node) {
-                struct uart_frame_bitfield_definition *bitfield_definition = parse_frame_bitfield_node(bitfield_node,
-                                                                                                       expression_engine,
-                                                                                                       on_error);
+                struct uart_frame_bitfield_definition *bitfield_definition = parse_frame_bitfield_node(bitfield_node, offset_bits,
+                                                                                                       expression_engine, on_error);
                 if (bitfield_definition) {
                     if (bitfield_definition_cur) {
                         bitfield_definition_cur->next = bitfield_definition;
@@ -195,6 +196,8 @@ parse_frame_bitfields_node(cJSON *bitfields_node, struct uart_frame_parser_expre
                     } else {
                         bitfield_definition_head = bitfield_definition_cur = bitfield_definition;
                     }
+
+                    offset_bits += bitfield_definition->bits;
                 } else {
                     uart_frame_bitfield_definition_release(bitfield_definition_head);
                 }
