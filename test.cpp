@@ -123,6 +123,48 @@ static cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *f
     return frame_data;
 }
 
+void on_error(enum uart_frame_parser_error_types error_type, const char* file, int line, const char* fmt, ...) {
+
+    const char* error_type_name[] = { "", "cJSON", "malloc", "Config Parse", "Lua" };
+
+    const char* log_template = "%s:%d:%s: %s";
+    char* format = (char*)calloc(snprintf(nullptr, 0, log_template, file, line, error_type_name[error_type], fmt) + 1, 1);
+    assert(format != nullptr);
+    sprintf(format, log_template, file, line, fmt);
+
+    va_list ap1, ap2;
+    va_start(ap1, fmt);
+    va_copy(ap2, ap1);
+
+    char* message = (char*)calloc(vsnprintf(nullptr, 0, format, ap1) + 1, 1);
+    assert(message != nullptr);
+    vsprintf(message, format, ap2);
+    GTEST_NONFATAL_FAILURE_(message);
+    free(message);
+    free(format);
+}
+
+void on_data(void* buffer, struct uart_frame_definition* frame_definition, struct uart_frame_field_info* field_info_head,
+    void* user_ptr) {
+    *(int*)user_ptr = 1;
+
+    cJSON* data = stringify_frame_data(buffer, frame_definition, field_info_head, 0);
+
+    const char* result = cJSON_Print(data);
+
+    GTEST_LOG_(INFO) << result;
+
+    cJSON_free(data);
+}
+
+void on_data1(void* buffer, struct uart_frame_definition* frame_definition, struct uart_frame_field_info* field_info_head,
+    void* user_ptr) {
+    
+    struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, on_error);
+
+    uart_frame_parser_field_data_release(field_data_head);
+}
+
 }
 
 namespace {
@@ -200,40 +242,6 @@ namespace {
     "init": "function sum(from, to) result = 0; for i = from, to, 1 do result = result + byte(i) end; return result; end"
 })_";
 
-    void on_error(enum uart_frame_parser_error_types error_type, const char *file, int line, const char *fmt, ...) {
-
-        const char *error_type_name[] = {"", "cJSON", "malloc", "Config Parse", "Lua"};
-
-        const char *log_template = "%s:%d:%s: %s";
-        char *format = (char *)calloc(snprintf(nullptr, 0, log_template, file, line, error_type_name[error_type], fmt) + 1, 1);
-        assert(format != nullptr);
-        sprintf(format, log_template, file, line, fmt);
-
-        va_list ap1, ap2;
-        va_start(ap1, fmt);
-        va_copy(ap2, ap1);
-
-        char *message = (char *)calloc(vsnprintf(nullptr, 0, format, ap1) + 1, 1);
-        assert(message != nullptr);
-        vsprintf(message, format, ap2);
-        GTEST_NONFATAL_FAILURE_(message);
-        free(message);
-        free(format);
-    }
-
-    void on_data(void *buffer, struct uart_frame_definition *frame_definition, struct uart_frame_field_info *field_info_head,
-                void *user_ptr) {
-        *(int *) user_ptr = 1;
-
-        cJSON *data = stringify_frame_data(buffer, frame_definition, field_info_head, 0);
-
-        const char *result = cJSON_Print(data);
-
-        GTEST_LOG_(INFO) << result;
-
-        cJSON_free(data);
-    }
-
     TEST(Example1, ConfigLoadTest) {
 
         struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data);
@@ -258,6 +266,20 @@ namespace {
         uart_frame_parser_release(parser);
 
         ASSERT_EQ(success, 1);
+    }
+
+    TEST(Example1, FrameReadTest) {
+
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data1);
+
+        ASSERT_NE(nullptr, parser);
+
+        const uint8_t data[] = { 0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
+                                0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b };
+
+        uart_frame_parser_feed_data(parser, (uint8_t*)data, sizeof data, NULL);
+
+        uart_frame_parser_release(parser);
     }
 }
 

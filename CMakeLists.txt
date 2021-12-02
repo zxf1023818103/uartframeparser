@@ -11,7 +11,7 @@ if (MSVC)
 endif()
 
 # 将源代码添加到此项目的可执行文件。
-add_library(uartframeparser STATIC "config_parse.c" "frame_parse.c" "uartframeparser.h" "buffer.c" "expression.c")
+add_library(uartframeparser STATIC "config_parse.c" "frame_parse.c" "uartframeparser.h" "buffer.c" "expression.c" "frame_read.c")
 
 set(_IMPORT_PREFIX "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 find_package(cJSON REQUIRED)

@@ -262,6 +262,61 @@ struct uart_frame_field_info {
 };
 
 /// <summary>
+/// 帧字段数据
+/// </summary>
+struct uart_frame_field_data {
+
+    /// <summary>
+    /// 下一个帧字段数据
+    /// </summary>
+    struct uart_frame_field_data* next;
+
+    /// <summary>
+    /// 对应的帧字段信息
+    /// </summary>
+    struct uart_frame_field_info* field_info;
+
+    union {
+
+        /// <summary>
+        /// 包含的子帧字段数据
+        /// </summary>
+        struct uart_frame_field_data* subframe_field_data_head;
+
+        /// <summary>
+        /// 包含的位字段数据
+        /// </summary>
+        struct uart_frame_bitfield_data* bitfield_data_head;
+
+        /// <summary>
+        /// 包含的帧字段数据
+        /// </summary>
+        uint8_t data[1];
+    };
+};
+
+/// <summary>
+/// 位字段数据
+/// </summary>
+struct uart_frame_bitfield_data {
+
+    /// <summary>
+    /// 下一个位字段数据
+    /// </summary>
+    struct uart_frame_bitfield_data* next;
+
+    /// <summary>
+    /// 对应的位字段定义
+    /// </summary>
+    struct uart_frame_bitfield_definition* bitfield_definition;
+
+    /// <summary>
+    /// 包含的位字段数据
+    /// </summary>
+    uint8_t data[1];
+};
+
+/// <summary>
 /// 帧解析器错误回调函数定义
 /// </summary>
 typedef void (*uart_frame_parser_error_callback_t)(enum uart_frame_parser_error_types error_type, const char *file,
@@ -445,8 +500,32 @@ void uart_frame_parser_expression_release(struct uart_frame_parser_expression_en
 /// <param name="offset">相对于帧缓冲队列起始位置的偏移量</param>
 int uart_frame_parser_expression_eval(struct uart_frame_parser_expression *expression, uint32_t offset);
 
+/// <summary>
+/// 计算完成后获取表达式结果
+/// </summary>
+/// <param name="expression">要获取结果的表达式</param>
+/// <returns>返回表达式结果</returns>
 struct uart_frame_parser_expression_result *
 uart_frame_parser_expression_get_result(struct uart_frame_parser_expression *expression);
+
+/// <summary>
+/// 根据帧信息读取指定字段的数据
+/// </summary>
+/// <param name="buffer">帧缓冲区</param>
+/// <param name="field_info_head">帧字段信息列表</param>
+/// <param name="concerned_field_definitions">要读取的帧字段的帧定义指针数组，最后一个元素需要为 NULL，传入 NULL 读取所有字段</param>
+/// <param name="on_error">错误回调函数</param>
+/// <returns>返回帧数据列表</returns>
+struct uart_frame_field_data* uart_frame_parser_read_concerned_fields(void* buffer,
+    struct uart_frame_field_info* field_info_head,
+    struct uart_frame_field_definition** concerned_field_definitions,
+    uart_frame_parser_error_callback_t on_error);
+
+/// <summary>
+/// 释放帧数据
+/// </summary>
+/// <param name="field_data_head">要释放的帧数据列表</param>
+void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_data_head);
 
 #ifdef __cplusplus
 }
