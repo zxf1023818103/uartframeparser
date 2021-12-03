@@ -212,7 +212,17 @@ namespace {
                 {
                     "bytes": 1,
                     "name": "working_status",
-                    "description": "Working status"
+                    "description": "Working status",
+                    "bitfields": [
+                        {
+                            "name": "fan_status",
+                            "description": "Fan Status",
+                            "bits": 1
+                        },
+                        {
+                            "bits": 7
+                        }
+                    ]
                 }
             ],
             "validator": "return byte(1) == 0x01"

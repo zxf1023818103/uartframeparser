@@ -117,7 +117,7 @@ static int l_byte(lua_State *L) {
                 struct uart_frame_parser_buffer *buffer = lua_touserdata(L, -1);
                 lua_pop(L, 1);
 
-                int byte = uart_frame_parser_buffer_at(buffer, index + offset - 1);
+                int byte = uart_frame_parser_buffer_at(buffer, (uint32_t)(index + offset - 1));
                 lua_pushinteger(L, byte);
                 if (byte >= 0) {
                     return 1;
@@ -462,7 +462,7 @@ static int handle_default_expression_result(lua_State *L, int status, int result
             int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
             if (ret > 0) {
                 expression->result->type = expression->type;
-                expression->result->byte_array_size = len;
+                expression->result->byte_array_size = (uint32_t)len;
                 memcpy(expression->result->byte_array, data, len);
                 return 1;
             } else {
@@ -492,7 +492,7 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
             const char *string = lua_tolstring(L, -1, &len);
             int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
             if (ret > 0) {
-                expression->result->byte_array_size = len;
+                expression->result->byte_array_size = (uint32_t)len;
                 memcpy(expression->result->byte_array, string, len);
                 expression->result->type = expression->type;
                 return 1;

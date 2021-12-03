@@ -1,10 +1,10 @@
 #include "uartframeparser.h"
 #include <stdlib.h>
 
-#define bitset_size(bits)         (((uint64_t)(bits) >> 3) + ((uint64_t)(bits) & 0xf ? 1ull : 0ull))
-#define bitset_set(bitset, bit)   ((bitset)[(bit) >> 3] |=  (1 << ((bit) >> 3)))
-#define bitset_get(bitset, bit)   ((bitset)[(bit) >> 3] &   (1 << ((bit) >> 3)))
-#define bitset_unset(bitset, bit) ((bitset)[(bit) >> 3] &= ~(1 << ((bit) >> 3)))
+#define bitset_size(bits)         (((uint64_t)(bits) / 8) + ((uint64_t)(bits) & 0xf ? 1ull : 0ull))
+#define bitset_set(bitset, bit)   ((bitset)[(bit) / 8] |=  (1 << ((bit) % 8)))
+#define bitset_get(bitset, bit)   ((bitset)[(bit) / 8] &   (1 << ((bit) % 8)))
+#define bitset_unset(bitset, bit) ((bitset)[(bit) / 8] &= ~(1 << ((bit) % 8)))
 
 static struct uart_frame_field_data* read_fields(void* buffer,
 	struct uart_frame_field_info* field_info_head,
@@ -20,8 +20,12 @@ static void bitfield_data_release(struct uart_frame_bitfield_data* bitfield_data
 
 void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_data_head) {
 	while (field_data_head) {
-		bitfield_data_release(field_data_head->bitfield_data_head);
-		uart_frame_parser_field_data_release(field_data_head->subframe_field_data_head);
+		if (field_data_head->field_info->field_definition->has_subframes) {
+			uart_frame_parser_field_data_release(field_data_head->subframe_field_data_head);
+		}
+		else if (field_data_head->field_info->field_definition->has_bitfields) {
+			bitfield_data_release(field_data_head->bitfield_data_head);
+		}
 		struct uart_frame_field_data* next = field_data_head->next;
 		free(field_data_head);
 		field_data_head = next;
@@ -112,7 +116,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 		uart_frame_parser_buffer_read(buffer, field_info->offset, data, field_info->data_size);
 
 		struct uart_frame_field_data* field_data = NULL;
-		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->subframe_field_info, on_error);
+		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->field_definition->bitfield_definition_head, on_error);
 		if (bitfield_data_head) {
 			field_data = calloc(1, sizeof(struct uart_frame_field_data));
 			if (field_data) {
@@ -160,7 +164,7 @@ static struct uart_frame_field_data* read_field(void* buffer,
 		return read_subframe_contained_field(buffer, field_info, on_error);
 	}
 	else if (field_info->field_definition->has_bitfields) {
-		return read_subframe_contained_field(buffer, field_info, on_error);
+		return read_bitfield_contained_field(buffer, field_info, on_error);
 	}
 	else {
 		return read_common_field(buffer, field_info, on_error);
