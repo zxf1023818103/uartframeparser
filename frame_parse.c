@@ -85,7 +85,7 @@ parse_frame(struct uart_frame_definition *frame_definition, struct uart_frame_de
     struct uart_frame_field_info *field_info_cur = NULL;
     struct uart_frame_field_info *field_info_head = NULL;
 
-    struct uart_frame_field_definition *field_definition = frame_definition->field_head;
+    struct uart_frame_field_definition *field_definition = frame_definition->field_definition_head;
     while (field_definition) {
         struct uart_frame_field_info *field_info;
         int field_size = parse_field(field_definition, frame_definition_head, &field_info, buffer,

@@ -101,7 +101,7 @@ struct uart_frame_definition {
     /// <summary>
     /// 帧字段列表
     /// </summary>
-    struct uart_frame_field_definition *field_head;
+    struct uart_frame_field_definition *field_definition_head;
 };
 
 /// <summary>
