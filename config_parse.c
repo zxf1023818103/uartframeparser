@@ -39,7 +39,7 @@ static void uart_frame_field_definition_release(struct uart_frame_field_definiti
 static void uart_frame_definition_release(struct uart_frame_definition *frame_definition_head) {
     struct uart_frame_definition *next;
     while (frame_definition_head) {
-        uart_frame_field_definition_release(frame_definition_head->field_definition_head);
+        uart_frame_field_definition_release(frame_definition_head->field_head);
         next = frame_definition_head->next;
         free(frame_definition_head);
         frame_definition_head = next;
@@ -619,7 +619,7 @@ parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expressio
                     frame_definition->name = name;
                     frame_definition->description = description;
                     frame_definition->validator_expression = validator_expression;
-                    frame_definition->field_definition_head = field_definition_head;
+                    frame_definition->field_head = field_definition_head;
                     return frame_definition;
                 } else {
                     on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
