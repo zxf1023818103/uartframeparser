@@ -537,6 +537,13 @@ struct uart_frame_field_data* uart_frame_parser_read_concerned_fields(void* buff
 /// <param name="field_data_head">要释放的帧数据列表</param>
 void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_data_head);
 
+/// <summary>
+/// 计算帧字段解码表达式
+/// </summary>
+/// <param name="field_info_head">帧信息列表</param>
+/// <returns>0：没有帧字段解码表达式被计算；1：计算成功；其他负值：计算失败，返回值含义同 uart_frame_parser_expression_eval()</returns>
+int uart_frame_parser_eval_tostring_expression(struct uart_frame_field_info* field_info_head);
+
 #ifdef __cplusplus
 }
 #endif
