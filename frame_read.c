@@ -59,22 +59,31 @@ static struct uart_frame_bitfield_data* read_bitfield(uint8_t* data,
 }
 
 static struct uart_frame_bitfield_data* read_bitfields(uint8_t* data,
+	uint32_t data_size,
 	struct uart_frame_bitfield_definition* bitfield_definition_head,
 	uart_frame_parser_error_callback_t on_error) {
 	struct uart_frame_bitfield_data* bitfield_data_head = NULL;
 	struct uart_frame_bitfield_data* bitfield_data_tail = NULL;
+	
+	uint32_t bits = 0;
 	while (bitfield_definition_head) {
-
-		struct uart_frame_bitfield_data* bitfield_data = read_bitfield(data, bitfield_definition_head, on_error);
-		if (bitfield_data) {
-			if (bitfield_data_tail) {
-				bitfield_data_tail = bitfield_data_tail->next = bitfield_data;
+		bits += bitfield_definition_head->bits;
+		if (bits <= data_size * 8) {
+			struct uart_frame_bitfield_data* bitfield_data = read_bitfield(data, bitfield_definition_head, on_error);
+			if (bitfield_data) {
+				if (bitfield_data_tail) {
+					bitfield_data_tail = bitfield_data_tail->next = bitfield_data;
+				}
+				else {
+					bitfield_data_head = bitfield_data_tail = bitfield_data;
+				}
 			}
 			else {
-				bitfield_data_head = bitfield_data_tail = bitfield_data;
+				goto err;
 			}
 		}
 		else {
+		err:
 			bitfield_data_release(bitfield_data_head);
 			return NULL;
 		}
@@ -116,7 +125,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 		uart_frame_parser_buffer_read(buffer, field_info->offset, data, field_info->data_size);
 
 		struct uart_frame_field_data* field_data = NULL;
-		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->field_definition->bitfield_definition_head, on_error);
+		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->data_size, field_info->field_definition->bitfield_definition_head, on_error);
 		if (bitfield_data_head) {
 			field_data = calloc(1, sizeof(struct uart_frame_field_data));
 			if (field_data) {
