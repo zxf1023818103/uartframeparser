@@ -47,6 +47,9 @@ parse_field(struct uart_frame_field_definition *field_definition, struct uart_fr
                     free(field_info);
                     return result;
                 }
+                else {
+                    subframe_field_info->parent_field_info = field_info;
+                }
             }
 
             field_info->field_definition = field_definition;
@@ -85,7 +88,7 @@ parse_frame(struct uart_frame_definition *frame_definition, struct uart_frame_de
     struct uart_frame_field_info *field_info_cur = NULL;
     struct uart_frame_field_info *field_info_head = NULL;
 
-    struct uart_frame_field_definition *field_definition = frame_definition->field_head;
+    struct uart_frame_field_definition *field_definition = frame_definition->field_definition_head;
     while (field_definition) {
         struct uart_frame_field_info *field_info;
         int field_size = parse_field(field_definition, frame_definition_head, &field_info, buffer,

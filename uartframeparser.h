@@ -101,7 +101,7 @@ struct uart_frame_definition {
     /// <summary>
     /// 帧字段列表
     /// </summary>
-    struct uart_frame_field_definition *field_head;
+    struct uart_frame_field_definition *field_definition_head;
 };
 
 /// <summary>
@@ -227,9 +227,15 @@ struct uart_frame_bitfield_definition {
 };
 
 /// <summary>
-/// 帧字段数据
+/// 帧字段信息
 /// </summary>
 struct uart_frame_field_info {
+
+    /// <summary>
+    /// 父帧字段信息
+    /// </summary>
+    struct uart_frame_field_info* parent_field_info;
+
     /// <summary>
     /// 指向下一个帧字段数据起始位置
     /// </summary>
