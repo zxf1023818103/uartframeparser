@@ -241,6 +241,11 @@ struct uart_frame_field_info {
     struct uart_frame_field_definition *field_definition;
 
     /// <summary>
+    /// 父帧字段偏移量
+    /// </summary>
+    uint32_t parent_offset;
+
+    /// <summary>
     /// 帧字段偏移量
     /// </summary>
     uint32_t offset;
