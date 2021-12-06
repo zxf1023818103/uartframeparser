@@ -224,6 +224,11 @@ struct uart_frame_bitfield_definition {
     /// 位字段长度
     /// </summary>
     uint32_t bits;
+
+    /// <summary>
+    /// 位字段解码表达式
+    /// </summary>
+    struct uart_frame_parser_expression* tostring_expression;
 };
 
 /// <summary>

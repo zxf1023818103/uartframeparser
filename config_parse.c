@@ -220,6 +220,7 @@ parse_frame_bitfield_node(cJSON *bitfield_node, uint32_t offset_bits,
                 bitfield_definition->description = description;
                 bitfield_definition->offset_bits = offset_bits;
                 bitfield_definition->bits = bits;
+                bitfield_definition->tostring_expression = tostring_expression;
 
                 return bitfield_definition;
             }
