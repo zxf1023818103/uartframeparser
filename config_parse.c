@@ -419,10 +419,11 @@ parse_frame_field_node(cJSON *field_node, struct uart_frame_parser_expression_en
                         "duplicated field tostring node: %s",
                         cJSON_Print(field_attribute_node));
                 }
-            } else {
-                on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                         "unknown field definition attribute: %s", cJSON_Print(field_attribute_node));
             }
+            //else {
+            //    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+            //             "unknown field definition attribute: %s", cJSON_Print(field_attribute_node));
+            //}
 
             field_attribute_node = field_attribute_node->next;
         }
@@ -606,10 +607,11 @@ parse_definition_node(cJSON *definition_node, struct uart_frame_parser_expressio
                         on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
                             "duplicated frame field definitions: %s", cJSON_Print(definition_attribute_node));
                     }
-                } else {
-                    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
-                             "unknown field definition attributes: %s", cJSON_Print(definition_attribute_node));
                 }
+                //else {
+                //    on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__,
+                //             "unknown field definition attributes: %s", cJSON_Print(definition_attribute_node));
+                //}
 
                 definition_attribute_node = definition_attribute_node->next;
             }
