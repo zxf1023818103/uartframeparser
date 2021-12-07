@@ -215,9 +215,9 @@ int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data,
     uart_frame_parser_buffer_append(parser->buffer, data, size);
 
     if (parser->last_field_info_head && parser->last_frame_definition) {
-        if (parser->frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
-            parser->on_data(parser->buffer, parser->last_frame_definition, parser->last_field_info_head, user_ptr);
-            parser->frame_bytes = 0;
+        if (parser->last_frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
+            parser->on_data(parser->buffer, parser->last_frame_definition, parser->last_frame_bytes, parser->last_field_info_head, user_ptr);
+            parser->last_frame_bytes = 0;
             parser->last_field_info_head = NULL;
             parser->last_frame_definition = NULL;
         } else {
@@ -232,10 +232,10 @@ int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data,
                                      &frame_definition, parser->buffer, 0, 0, parser->on_error);
         if (frame_bytes > 0) {
             if ((uint32_t)frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
-                parser->on_data(parser->buffer, frame_definition, field_info_head, user_ptr);
+                parser->on_data(parser->buffer, frame_definition, frame_bytes, field_info_head, user_ptr);
                 uart_frame_parser_buffer_increase_origin(parser->buffer, frame_bytes);
             } else {
-                parser->frame_bytes = frame_bytes;
+                parser->last_frame_bytes = frame_bytes;
                 parser->last_frame_definition = frame_definition;
                 parser->last_field_info_head = field_info_head;
                 return -1;

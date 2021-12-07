@@ -144,7 +144,7 @@ static void on_error(enum uart_frame_parser_error_types error_type, const char* 
     free(format);
 }
 
-void on_data(void* buffer, struct uart_frame_definition* frame_definition, struct uart_frame_field_info* field_info_head,
+void on_data(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
     void* user_ptr) {
     *(int*)user_ptr = 1;
 
@@ -243,7 +243,7 @@ cJSON* stringify_frame_data2(struct uart_frame_definition* frame_definition, str
     return frame_data;
 }
 
-void on_data1(void* buffer, struct uart_frame_definition* frame_definition, struct uart_frame_field_info* field_info_head,
+void on_data1(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
     void* user_ptr) {
     
     struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, on_error);
@@ -251,6 +251,13 @@ void on_data1(void* buffer, struct uart_frame_definition* frame_definition, stru
     uart_frame_parser_eval_tostring_expression(field_info_head);
 
     cJSON* data = stringify_frame_data2(frame_definition, field_data_head);
+
+    uint8_t* raw = (uint8_t*)malloc(frame_bytes);
+    if (raw) {
+        uart_frame_parser_buffer_read(buffer, 0, raw, frame_bytes);
+        cJSON_AddItemToObject(data, "hex", stringify_binary_data2(raw, frame_bytes));
+    }
+    free(raw);
 
     GTEST_LOG_(INFO) << cJSON_Print(data);
 

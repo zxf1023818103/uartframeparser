@@ -337,7 +337,7 @@ typedef void (*uart_frame_parser_error_callback_t)(enum uart_frame_parser_error_
 /// </summary>
 /// <param name="frame_data">指向解析出的帧数据</param>
 /// <param name="user_ptr">用户传入的自定义参数</param>
-typedef void (*uart_frame_parser_data_callback_t)(void *buffer, struct uart_frame_definition *frame_definition,
+typedef void (*uart_frame_parser_data_callback_t)(void *buffer, struct uart_frame_definition *frame_definition, uint32_t frame_bytes,
                                                  struct uart_frame_field_info *field_info_head, void *user_ptr);
 
 /// <summary>
@@ -378,7 +378,7 @@ struct uart_frame_parser {
 
     struct uart_frame_definition *last_frame_definition;
 
-    uint32_t frame_bytes;
+    uint32_t last_frame_bytes;
 };
 
 /// <summary>
