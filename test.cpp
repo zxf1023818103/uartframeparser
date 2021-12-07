@@ -161,9 +161,11 @@ static cJSON* stringify_binary_data2(uint8_t *data, uint32_t data_size) {
     char* hex_data = (char*)malloc(data_size * 2 + 1);
 
     char* hex = hex_data;
-    for (uint32_t i = 0; i < data_size; i++) {
-        sprintf(hex, "%02x", data[i]);
-        hex += 2;
+    if (hex) {
+        for (uint32_t i = 0; i < data_size; i++) {
+            sprintf(hex, "%02x", data[i]);
+            hex += 2;
+        }
     }
 
     cJSON* hex_data_node = cJSON_CreateString(hex_data);
