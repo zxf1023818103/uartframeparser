@@ -179,6 +179,12 @@ static cJSON* stringify_bitfield_data2(struct uart_frame_bitfield_data* bitfield
     cJSON_AddStringToObject(bitfield_data_node, "description", bitfield_data->bitfield_definition->description);
     cJSON_AddNumberToObject(bitfield_data_node, "bits", bitfield_data->bitfield_definition->bits);
     cJSON_AddItemToObject(bitfield_data_node, "hex", stringify_binary_data2(bitfield_data->data, bitset_size(bitfield_data->bitfield_definition->bits)));
+    if (bitfield_data->bitfield_definition->tostring_expression) {
+        struct uart_frame_parser_expression_result* result = uart_frame_parser_expression_get_result(bitfield_data->bitfield_definition->tostring_expression);
+        if (result) {
+            cJSON_AddStringToObject(bitfield_data_node, "text", (const char*)result->byte_array);
+        }
+    }
     return bitfield_data_node;
 }
 
@@ -219,6 +225,12 @@ cJSON* stringify_frame_data2(struct uart_frame_definition* frame_definition, str
         else {
             cJSON* hex_data = stringify_binary_data2(field_data_head->data, field_data_head->field_info->data_size);
             cJSON_AddItemToObject(field_info_node, "hex", hex_data);
+            if (field_data_head->field_info->field_definition->tostring_expression) {
+                struct uart_frame_parser_expression_result* result = uart_frame_parser_expression_get_result(field_data_head->field_info->field_definition->tostring_expression);
+                if (result) {
+                    cJSON_AddStringToObject(field_info_node, "text", (const char*)result->byte_array);
+                }
+            }
         }
 
         cJSON_AddItemToArray(data, field_info_node);
@@ -235,6 +247,8 @@ void on_data1(void* buffer, struct uart_frame_definition* frame_definition, stru
     void* user_ptr) {
     
     struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, on_error);
+
+    uart_frame_parser_eval_tostring_expression(field_info_head);
 
     cJSON* data = stringify_frame_data2(frame_definition, field_data_head);
 
@@ -287,7 +301,8 @@ namespace {
                     "bytes": 1,
                     "name": "sof",
                     "description": "Start of Frame",
-                    "default": "return '\\x01'"
+                    "default": "return '\\x01'",
+                    "tostring": "return 'Start of Frame'"
                 },
                 {
                     "bytes": 1,
@@ -297,7 +312,8 @@ namespace {
                         {
                             "name": "fan_status",
                             "description": "Fan Status",
-                            "bits": 1
+                            "bits": 1,
+                            "tostring": "return ({'Off','On'})[(byte(2) & 1) + 1]"
                         },
                         {
                             "bits": 7

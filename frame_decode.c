@@ -2,9 +2,11 @@
 
 static int eval_bitfield_tostring_expression(struct uart_frame_bitfield_definition* bitfield_definition_head, uint32_t offset) {
 	while (bitfield_definition_head) {
-		int result = uart_frame_parser_expression_eval(bitfield_definition_head->tostring_expression, offset);
-		if (result < 0) {
-			return result;
+		if (bitfield_definition_head->tostring_expression) {
+			int result = uart_frame_parser_expression_eval(bitfield_definition_head->tostring_expression, offset);
+			if (result < 0) {
+				return result;
+			}
 		}
 		bitfield_definition_head = bitfield_definition_head->next;
 	}

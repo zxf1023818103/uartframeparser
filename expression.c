@@ -490,10 +490,10 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
         if (result_type == LUA_TSTRING) {
             size_t len;
             const char *string = lua_tolstring(L, -1, &len);
-            int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
+            int ret = expression_result_create(&expression->result, len + 1, expression->expression_engine->on_error);
             if (ret > 0) {
-                expression->result->byte_array_size = (uint32_t)len;
-                memcpy(expression->result->byte_array, string, len);
+                expression->result->byte_array_size = (uint32_t)(len + 1);
+                memcpy(expression->result->byte_array, string, len + 1);
                 expression->result->type = expression->type;
                 return 1;
             } else {
