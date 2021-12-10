@@ -1,35 +1,28 @@
 #include "uartframeparser.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <string.h>
 
 struct uart_frame_parser_buffer {
 
     uart_frame_parser_error_callback_t on_error;
 
-    FILE *fp;
+    uint32_t capacity;
 
-    uint32_t origin;
+    uint32_t size;
+
+    uint8_t *data;
 };
 
 void *
 uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, void *reserved) {
 
-    FILE *fp;
-    if (reserved) {
-        fp = fopen(reserved, "rw");
-    } else {
-        fp = tmpfile();
-    }
-    assert(fp);
+    (void)reserved;
 
     struct uart_frame_parser_buffer *buffer = calloc(1, sizeof(struct uart_frame_parser_buffer));
     if (buffer) {
-        buffer->fp = fp;
         buffer->on_error = on_error;
         return buffer;
     } else {
-        fclose(fp);
         on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a buffer");
     }
 
@@ -37,44 +30,62 @@ uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, voi
 }
 
 void uart_frame_parser_buffer_release(void *buffer) {
-    fclose(((struct uart_frame_parser_buffer*)buffer)->fp);
+    struct uart_frame_parser_buffer* _buffer = buffer;
+    if (_buffer->data) {
+        free(_buffer->data);
+    }
     free(buffer);
 }
 
 void uart_frame_parser_buffer_append(void *buffer, uint8_t *data, uint32_t size) {
-    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
-    assert(fwrite(data, 1, size, ((struct uart_frame_parser_buffer*)buffer)->fp) == size);
+    struct uart_frame_parser_buffer* _buffer = buffer;
+
+    uint32_t remaining_bytes = _buffer->capacity - _buffer->size;
+    if (remaining_bytes < size) {
+        uint32_t new_capacity = _buffer->size + size;
+
+        void* new_data = realloc(_buffer->data, new_capacity);
+        if (new_data) {
+            _buffer->data = new_data;
+            _buffer->capacity = new_capacity;
+        }
+        else {
+            _buffer->on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot reallocate buffer: new capacity %u bytes", new_capacity);
+            return;
+        }
+    }
+    
+    memcpy(_buffer->data + _buffer->size, data, size);
+    _buffer->size += size;
 }
 
 int
 uart_frame_parser_buffer_read(void *buffer, uint32_t offset, uint8_t *data, uint32_t size) {
-    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
-    long filesize = ftell(((struct uart_frame_parser_buffer*)buffer)->fp);
-    if (filesize >= (long)(((struct uart_frame_parser_buffer*)buffer)->origin + offset + size)) {
-        fseek(((struct uart_frame_parser_buffer*)buffer)->fp, ((long)((struct uart_frame_parser_buffer*)buffer)->origin) + offset, SEEK_SET);
-        assert(fread(data, 1, size, ((struct uart_frame_parser_buffer*)buffer)->fp) == size);
+    struct uart_frame_parser_buffer* _buffer = buffer;
+    if (offset + size <= _buffer->size) {
+        memcpy(data, _buffer->data + offset, size);
         return 1;
     }
-    return 0;
+    else {
+        return 0;
+    }
 }
 
 uint32_t uart_frame_parser_buffer_get_size(void *buffer) {
-    fseek(((struct uart_frame_parser_buffer*)buffer)->fp, 0, SEEK_END);
-    long size = ftell(((struct uart_frame_parser_buffer*)buffer)->fp);
-    assert(size >= 0);
-    uint32_t result = size;
-    result -= ((struct uart_frame_parser_buffer*)buffer)->origin;
-    return result;
+    struct uart_frame_parser_buffer* _buffer = buffer;
+    return _buffer->size;
 }
 
 void uart_frame_parser_buffer_increase_origin(void *buffer, uint32_t increment) {
-    ((struct uart_frame_parser_buffer*)buffer)->origin += increment;
+    struct uart_frame_parser_buffer* _buffer = buffer;
+    uint32_t new_size = _buffer->size > increment ? (_buffer->size - increment) : 0;
+    if (new_size) {
+        memmove(_buffer->data, _buffer->data + increment, _buffer->size - new_size);
+    }
+    _buffer->size = new_size;
 }
 
 int uart_frame_parser_buffer_at(void *buffer, uint32_t offset) {
-    uint8_t result;
-    if (uart_frame_parser_buffer_read(buffer, offset, &result, 1)) {
-        return result;
-    }
-    return -1;
+    struct uart_frame_parser_buffer* _buffer = buffer;
+    return _buffer->size > offset ? _buffer->data[offset] : -1;
 }
