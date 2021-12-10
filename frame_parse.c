@@ -215,7 +215,7 @@ static int next_frame(struct uart_frame_definition *frame_definition_head,
     }
 }
 
-int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data, uint32_t size) {
+int uart_frame_parser_feed_data(struct uart_frame_parser *parser, const uint8_t* data, uint32_t size) {
     uart_frame_parser_buffer_append(parser->buffer, data, size);
 
     if (parser->last_field_info_head && parser->last_frame_definition) {

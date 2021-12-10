@@ -376,7 +376,7 @@ namespace {
         const uint8_t data[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
                                 0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b};
 
-        uart_frame_parser_feed_data(parser, (uint8_t *)data, sizeof data);
+        uart_frame_parser_feed_data(parser, (const uint8_t *)data, sizeof data);
 
         uart_frame_parser_release(parser);
 
@@ -392,7 +392,7 @@ namespace {
         const uint8_t data[] = { 0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
                                 0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b };
 
-        uart_frame_parser_feed_data(parser, (uint8_t*)data, sizeof data);
+        uart_frame_parser_feed_data(parser, (const uint8_t*)data, sizeof data);
 
         uart_frame_parser_release(parser);
     }

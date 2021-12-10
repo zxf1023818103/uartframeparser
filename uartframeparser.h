@@ -398,8 +398,7 @@ struct uart_frame_parser {
 /// <param name="on_error">帧解析器的错误回调函数</param>
 /// <return>创建的帧解析器实例</return>
 struct uart_frame_parser *uart_frame_parser_create(const char *json_config,
- uint32_t json_config_size,
-
+                                                   uint32_t json_config_size,
                                                    uart_frame_parser_error_callback_t on_error,
                                                    uart_frame_parser_data_callback_t on_data, void* user_ptr);
 
@@ -417,7 +416,7 @@ void uart_frame_parser_release(struct uart_frame_parser *parser);
 /// <param name="size">要填充的数据大小（字节）</param>
 /// <param name="user_ptr">传递给 uart_frame_parser_data_callback_t 的 user_ptr</param>
 /// <returns></returns>
-int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data, uint32_t size);
+int uart_frame_parser_feed_data(struct uart_frame_parser *parser, const uint8_t* data, uint32_t size);
 
 /// <summary>
 /// 创建帧解析器缓冲区
@@ -439,7 +438,7 @@ void uart_frame_parser_buffer_release(void *buffer);
 /// <param name="buffer">要写入数据的帧缓冲区</param>
 /// <param name="data">指向数据起始位置</param>
 /// <param name="size">写入数据大小（字节）</param>
-void uart_frame_parser_buffer_append(void *buffer, uint8_t *data, uint32_t size);
+void uart_frame_parser_buffer_append(void *buffer, const uint8_t* data, uint32_t size);
 
 /// <summary>
 /// 读取帧缓冲区指定位置的数据

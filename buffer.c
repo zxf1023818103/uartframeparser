@@ -40,7 +40,7 @@ void uart_frame_parser_buffer_release(void *buffer) {
     free(buffer);
 }
 
-void uart_frame_parser_buffer_append(void *buffer, uint8_t *data, uint32_t size) {
+void uart_frame_parser_buffer_append(void *buffer, const uint8_t * data, uint32_t size) {
     struct uart_frame_parser_buffer* _buffer = buffer;
 
     uint32_t remaining_bytes = _buffer->capacity - _buffer->size;
