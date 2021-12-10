@@ -555,6 +555,19 @@ void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_da
 /// <returns>0：没有帧字段解码表达式被计算；1：计算成功；其他负值：计算失败，返回值含义同 uart_frame_parser_expression_eval()</returns>
 int uart_frame_parser_eval_tostring_expression(struct uart_frame_field_info* field_info_head);
 
+/// <summary>
+/// 将帧数据编码为 JSON
+/// </summary>
+/// <param name="buffer">帧缓冲</param>
+/// <param name="frame_definition">帧定义</param>
+/// <param name="frame_bytes">帧长度</param>
+/// <param name="field_data_head">帧数据列表</param>
+/// <returns>JSON 格式的帧数据，使用完毕必须调用 free() 释放</returns>
+const char* uart_frame_parser_jsonify_frame_data(void* buffer,
+    struct uart_frame_definition* frame_definition,
+    uint32_t frame_bytes,
+    struct uart_frame_field_data* field_data_head);
+
 #ifdef __cplusplus
 }
 #endif
