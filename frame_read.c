@@ -8,7 +8,7 @@
 
 static struct uart_frame_field_data* read_fields(void* buffer,
 	struct uart_frame_field_info* field_info_head,
-	uart_frame_parser_error_callback_t on_error);
+	uart_frame_parser_error_callback_t on_error, void* user_ptr);
 
 static void bitfield_data_release(struct uart_frame_bitfield_data* bitfield_data_head) {
 	while (bitfield_data_head) {
@@ -34,7 +34,7 @@ void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_da
 
 static struct uart_frame_bitfield_data* read_bitfield(uint8_t* data,
 	struct uart_frame_bitfield_definition* bitfield_definition,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 	struct uart_frame_bitfield_data* bitfield_data = calloc(1, offsetof(struct uart_frame_bitfield_data, data) + bitset_size(bitfield_definition->bits));
 	if (bitfield_data) {
 		bitfield_data->bitfield_definition = bitfield_definition;
@@ -53,7 +53,7 @@ static struct uart_frame_bitfield_data* read_bitfield(uint8_t* data,
 		return bitfield_data;
 	}
 	else {
-		on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a bitfield data");
+		on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a bitfield data");
 	}
 	return NULL;
 }
@@ -61,7 +61,7 @@ static struct uart_frame_bitfield_data* read_bitfield(uint8_t* data,
 static struct uart_frame_bitfield_data* read_bitfields(uint8_t* data,
 	uint32_t data_size,
 	struct uart_frame_bitfield_definition* bitfield_definition_head,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 	struct uart_frame_bitfield_data* bitfield_data_head = NULL;
 	struct uart_frame_bitfield_data* bitfield_data_tail = NULL;
 	
@@ -69,7 +69,7 @@ static struct uart_frame_bitfield_data* read_bitfields(uint8_t* data,
 	while (bitfield_definition_head) {
 		bits += bitfield_definition_head->bits;
 		if (bits <= data_size * 8) {
-			struct uart_frame_bitfield_data* bitfield_data = read_bitfield(data, bitfield_definition_head, on_error);
+			struct uart_frame_bitfield_data* bitfield_data = read_bitfield(data, bitfield_definition_head, on_error, user_ptr);
 			if (bitfield_data) {
 				if (bitfield_data_tail) {
 					bitfield_data_tail = bitfield_data_tail->next = bitfield_data;
@@ -96,9 +96,9 @@ static struct uart_frame_bitfield_data* read_bitfields(uint8_t* data,
 
 static struct uart_frame_field_data* read_subframe_contained_field(void* buffer,
 	struct uart_frame_field_info* field_info,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
-	struct uart_frame_field_data* subframe_field_data_head = read_fields(buffer, field_info->subframe_field_info, on_error);
+	struct uart_frame_field_data* subframe_field_data_head = read_fields(buffer, field_info->subframe_field_info, on_error, user_ptr);
 	if (subframe_field_data_head) {
 		struct uart_frame_field_data* field_data = calloc(1, sizeof(struct uart_frame_field_data));
 		if (field_data) {
@@ -108,7 +108,7 @@ static struct uart_frame_field_data* read_subframe_contained_field(void* buffer,
 		}
 		else {
 			uart_frame_parser_field_data_release(subframe_field_data_head);
-			on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
+			on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
 		}
 	}
 
@@ -117,7 +117,7 @@ static struct uart_frame_field_data* read_subframe_contained_field(void* buffer,
 
 static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 	struct uart_frame_field_info* field_info,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	uint8_t* data = malloc(field_info->data_size);
 	if (data) {
@@ -125,7 +125,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 		uart_frame_parser_buffer_read(buffer, field_info->offset, data, field_info->data_size);
 
 		struct uart_frame_field_data* field_data = NULL;
-		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->data_size, field_info->field_definition->bitfield_definition_head, on_error);
+		struct uart_frame_bitfield_data* bitfield_data_head = read_bitfields(data, field_info->data_size, field_info->field_definition->bitfield_definition_head, on_error, user_ptr);
 		if (bitfield_data_head) {
 			field_data = calloc(1, sizeof(struct uart_frame_field_data));
 			if (field_data) {
@@ -134,7 +134,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 			}
 			else {
 				bitfield_data_release(bitfield_data_head);
-				on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
+				on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
 			}
 		}
 
@@ -142,7 +142,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 		return field_data;
 	}
 	else {
-		on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data buffer");
+		on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data buffer");
 	}
 
 	return NULL;
@@ -150,7 +150,7 @@ static struct uart_frame_field_data* read_bitfield_contained_field(void* buffer,
 
 static struct uart_frame_field_data* read_common_field(void* buffer,
 	struct uart_frame_field_info* field_info,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	struct uart_frame_field_data* field_data = calloc(1, offsetof(struct uart_frame_field_data, data) + field_info->data_size);
 	if (field_data) {
@@ -159,35 +159,36 @@ static struct uart_frame_field_data* read_common_field(void* buffer,
 		return field_data;
 	}
 	else {
-		on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
+		on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field data");
 	}
 
 	return NULL;
 }
 
 static struct uart_frame_field_data* read_field(void* buffer,
+
 	struct uart_frame_field_info* field_info,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	if (field_info->field_definition->has_subframes) {
-		return read_subframe_contained_field(buffer, field_info, on_error);
+		return read_subframe_contained_field(buffer, field_info, on_error, user_ptr);
 	}
 	else if (field_info->field_definition->has_bitfields) {
-		return read_bitfield_contained_field(buffer, field_info, on_error);
+		return read_bitfield_contained_field(buffer, field_info, on_error, user_ptr);
 	}
 	else {
-		return read_common_field(buffer, field_info, on_error);
+		return read_common_field(buffer, field_info, on_error, user_ptr);
 	}
 }
 
 static struct uart_frame_field_data* read_fields(void* buffer,
 	struct uart_frame_field_info* field_info_head,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	struct uart_frame_field_data* field_data_head = NULL;
 	struct uart_frame_field_data* field_data_tail = NULL;
 	while (field_info_head) {
-		struct uart_frame_field_data* field_data = read_field(buffer, field_info_head, on_error);
+		struct uart_frame_field_data* field_data = read_field(buffer, field_info_head, on_error, user_ptr);
 		if (field_data) {
 			if (field_data_tail) {
 				field_data_tail = field_data_tail->next = field_data;
@@ -222,13 +223,13 @@ find_field_definition(struct uart_frame_field_definition* field_definiton,
 static struct uart_frame_field_data* read_concerned_fields(void* buffer,
 	struct uart_frame_field_info* field_info_head,
 	struct uart_frame_field_definition** concerned_field_definitions,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	struct uart_frame_field_data* field_data_head = NULL;
 	struct uart_frame_field_data* field_data_tail = NULL;
 	while (field_info_head) {
 		if (find_field_definition(field_info_head->field_definition, concerned_field_definitions)) {
-			struct uart_frame_field_data* field_data = read_field(buffer, field_info_head, on_error);
+			struct uart_frame_field_data* field_data = read_field(buffer, field_info_head, on_error, user_ptr);
 			if (field_data) {
 				if (field_data_tail) {
 					field_data_tail = field_data_tail->next = field_data;
@@ -250,12 +251,12 @@ static struct uart_frame_field_data* read_concerned_fields(void* buffer,
 struct uart_frame_field_data* uart_frame_parser_read_concerned_fields(void* buffer,
 	struct uart_frame_field_info* field_info_head,
 	struct uart_frame_field_definition** concerned_field_definitions,
-	uart_frame_parser_error_callback_t on_error) {
+	uart_frame_parser_error_callback_t on_error, void* user_ptr) {
 
 	if (concerned_field_definitions) {
-		return read_concerned_fields(buffer, field_info_head, concerned_field_definitions, on_error);
+		return read_concerned_fields(buffer, field_info_head, concerned_field_definitions, on_error, user_ptr);
 	}
 	else {
-		return read_fields(buffer, field_info_head, on_error);
+		return read_fields(buffer, field_info_head, on_error, user_ptr);
 	}
 }

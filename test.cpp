@@ -123,7 +123,9 @@ static cJSON *stringify_frame_data(void *buffer, struct uart_frame_definition *f
     return frame_data;
 }
 
-static void on_error(enum uart_frame_parser_error_types error_type, const char* file, int line, const char* fmt, ...) {
+static void on_error(void* user_ptr, enum uart_frame_parser_error_types error_type, const char* file, int line, const char* fmt, ...) {
+
+    (void)user_ptr;
 
     const char* error_type_name[] = { "", "cJSON", "malloc", "Config Parse", "Lua" };
 
@@ -246,7 +248,7 @@ cJSON* stringify_frame_data2(struct uart_frame_definition* frame_definition, str
 void on_data1(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
     void* user_ptr) {
     
-    struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, on_error);
+    struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, on_error, user_ptr);
 
     uart_frame_parser_eval_tostring_expression(field_info_head);
 
@@ -256,8 +258,8 @@ void on_data1(void* buffer, struct uart_frame_definition* frame_definition, uint
     if (raw) {
         uart_frame_parser_buffer_read(buffer, 0, raw, frame_bytes);
         cJSON_AddItemToObject(data, "hex", stringify_binary_data2(raw, frame_bytes));
+        free(raw);
     }
-    free(raw);
 
     GTEST_LOG_(INFO) << cJSON_Print(data);
 
@@ -357,7 +359,7 @@ namespace {
 
     TEST(Example1, ConfigLoadTest) {
 
-        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data);
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data, NULL);
 
         ASSERT_NE(nullptr, parser);
 
@@ -366,15 +368,15 @@ namespace {
 
     TEST(Example1, FrameParseTest) {
 
-        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data);
+        int success = 0;
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data, &success);
 
         ASSERT_NE(nullptr, parser);
 
         const uint8_t data[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
                                 0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b};
 
-        int success = 0;
-        uart_frame_parser_feed_data(parser, (uint8_t *)data, sizeof data, &success);
+        uart_frame_parser_feed_data(parser, (uint8_t *)data, sizeof data);
 
         uart_frame_parser_release(parser);
 
@@ -383,14 +385,14 @@ namespace {
 
     TEST(Example1, FrameReadTest) {
 
-        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data1);
+        struct uart_frame_parser *parser = uart_frame_parser_create(json, (uint32_t)strlen(json), on_error, on_data1, NULL);
 
         ASSERT_NE(nullptr, parser);
 
         const uint8_t data[] = { 0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
                                 0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b };
 
-        uart_frame_parser_feed_data(parser, (uint8_t*)data, sizeof data, NULL);
+        uart_frame_parser_feed_data(parser, (uint8_t*)data, sizeof data);
 
         uart_frame_parser_release(parser);
     }

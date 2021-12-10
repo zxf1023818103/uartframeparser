@@ -6,6 +6,8 @@ struct uart_frame_parser_buffer {
 
     uart_frame_parser_error_callback_t on_error;
 
+    void* user_ptr;
+
     uint32_t capacity;
 
     uint32_t size;
@@ -14,16 +16,17 @@ struct uart_frame_parser_buffer {
 };
 
 void *
-uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, void *reserved) {
+uart_frame_parser_buffer_create(uart_frame_parser_error_callback_t on_error, void* user_ptr, void *reserved) {
 
     (void)reserved;
 
     struct uart_frame_parser_buffer *buffer = calloc(1, sizeof(struct uart_frame_parser_buffer));
     if (buffer) {
         buffer->on_error = on_error;
+        buffer->user_ptr = user_ptr;
         return buffer;
     } else {
-        on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a buffer");
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a buffer");
     }
 
     return NULL;
@@ -50,7 +53,7 @@ void uart_frame_parser_buffer_append(void *buffer, uint8_t *data, uint32_t size)
             _buffer->capacity = new_capacity;
         }
         else {
-            _buffer->on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot reallocate buffer: new capacity %u bytes", new_capacity);
+            _buffer->on_error(_buffer->user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot reallocate buffer: new capacity %u bytes", new_capacity);
             return;
         }
     }

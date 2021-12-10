@@ -20,9 +20,14 @@ enum lua_register_table_indices {
     ERROR_CALLBACK_INDEX = 1,
 
     /// <summary>
+    /// 传入错误回调函数的用户数据下标
+    /// </summary>
+    USER_PTR_INDEX = 2,
+
+    /// <summary>
     /// 帧缓冲指针对应的 Lua 注册表下标
     /// </summary>
-    BUFFER_INDEX = 2,
+    BUFFER_INDEX = 3,
 };
 
 /// <summary>
@@ -38,6 +43,11 @@ struct uart_frame_parser_expression_engine {
     /// 错误回调函数
     /// </summary>
     uart_frame_parser_error_callback_t on_error;
+
+    /// <summary>
+    /// 传入错误回调函数的用户数据
+    /// </summary>
+    void* user_ptr;
 
     /// <summary>
     /// 该表达式引擎关联的预编译表达式列表
@@ -102,6 +112,11 @@ static int l_byte(lua_State *L) {
     uart_frame_parser_error_callback_t on_error = lua_touserdata(L, -1);
     lua_pop(L, 1);
 
+    lua_pushlightuserdata(L, (void*)USER_PTR_INDEX);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    void* user_ptr = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+
     if (lua_gettop(L) == 1) {
         int is_num;
         lua_Integer index = lua_tointegerx(L, -1, &is_num);
@@ -123,19 +138,19 @@ static int l_byte(lua_State *L) {
                     return 1;
                 }
             } else {
-                on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
+                on_error(user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
                          lua_pushfstring(L, "argument 1 %lld of byte() is <= 0", index));
                 lua_pop(L, 1);
                 lua_pushinteger(L, -1);
             }
         } else {
-            on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
+            on_error(user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
                      lua_pushfstring(L, "argument 1 %s of byte() is not an integer", lua_tostring(L, 1)));
             lua_pop(L, 1);
             lua_pushinteger(L, -2);
         }
     } else {
-        on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "%s\r\n",
                  lua_pushstring(L, "byte() must input 1 argument"));
         lua_pop(L, 1);
         lua_pushinteger(L, -2);
@@ -150,7 +165,7 @@ static int l_byte(lua_State *L) {
 /// </summary>
 /// <param name="L">指向 Lua 状态机</param>
 /// <param name="on_error">错误回调函数</param>
-static void handle_lua_error(lua_State *L, uart_frame_parser_error_callback_t on_error) {
+static void handle_lua_error(lua_State *L, uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     if (lua_gettop(L)) {
         const char *error_message = lua_tostring(L, -1);
         if (error_message) {
@@ -161,10 +176,10 @@ static void handle_lua_error(lua_State *L, uart_frame_parser_error_callback_t on
             }
         }
 
-        on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, lua_tostring(L, -1));
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, lua_tostring(L, -1));
         lua_settop(L, 0);
     } else {
-        on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "empty error message");
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "empty error message");
     }
 }
 
@@ -176,7 +191,7 @@ static void handle_lua_error(lua_State *L, uart_frame_parser_error_callback_t on
 /// <param name="on_error">错误回调函数</param>
 /// <returns>返回创建的 Lua 状态机</returns>
 static lua_State *lua_state_create(struct uart_frame_parser_buffer *buffer, const char *init_script,
-                                   uart_frame_parser_error_callback_t on_error) {
+                                   uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     lua_State *L = luaL_newstate();
     if (L) {
         lua_register(L, "byte", l_byte);
@@ -185,7 +200,7 @@ static lua_State *lua_state_create(struct uart_frame_parser_buffer *buffer, cons
             luaL_loadstring(L, init_script);
             int status = lua_pcall(L, 0, 0, 0);
             if (status != LUA_OK) {
-                handle_lua_error(L, on_error);
+                handle_lua_error(L, on_error, user_ptr);
                 lua_close(L);
                 return NULL;
             }
@@ -199,25 +214,30 @@ static lua_State *lua_state_create(struct uart_frame_parser_buffer *buffer, cons
         lua_pushlightuserdata(L, on_error);
         lua_settable(L, LUA_REGISTRYINDEX);
 
+        lua_pushlightuserdata(L, (void*)USER_PTR_INDEX);
+        lua_pushlightuserdata(L, user_ptr);
+        lua_settable(L, LUA_REGISTRYINDEX);
+
         return L;
     } else {
-        on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a lua state");
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a lua state");
         return NULL;
     }
 }
 
 struct uart_frame_parser_expression_engine *
 uart_frame_parser_expression_engine_create(struct uart_frame_parser_buffer *buffer, const char *init_script,
-                                           uart_frame_parser_error_callback_t on_error, void *reserved) {
+                                           uart_frame_parser_error_callback_t on_error, void* user_ptr, void *reserved) {
     (void) reserved;
 
-    lua_State *L = lua_state_create(buffer, init_script, on_error);
+    lua_State *L = lua_state_create(buffer, init_script, on_error, user_ptr);
     if (L) {
         struct uart_frame_parser_expression_engine *expression_engine = calloc(1,
                                                                                sizeof(struct uart_frame_parser_expression_engine));
         if (expression_engine) {
             expression_engine->L = L;
             expression_engine->on_error = on_error;
+            expression_engine->user_ptr = user_ptr;
             return expression_engine;
         }
     }
@@ -288,7 +308,7 @@ expression_create(struct uart_frame_parser_expression_engine *engine, const char
             strcpy(expression->name, expression_name);
         } else {
             free(expression);
-            engine->on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
+            engine->on_error(engine->user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__,
                              "cannot allocate expression name space");
             return NULL;
         }
@@ -302,11 +322,11 @@ expression_create(struct uart_frame_parser_expression_engine *engine, const char
         } else {
             free(expression->name);
             free(expression);
-            engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "invalid expression: %s",
+            engine->on_error(engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__, "invalid expression: %s",
                              expression_string);
         }
     } else {
-        engine->on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a expression space");
+        engine->on_error(engine->user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a expression space");
     }
 
     return NULL;
@@ -374,7 +394,7 @@ static const char *do_read_bytecode(lua_State *L, void *ud, size_t *ptr_data_siz
 }
 
 static int expression_result_create(struct uart_frame_parser_expression_result **ptr_result, size_t byte_array_size,
-                                    uart_frame_parser_error_callback_t on_error) {
+                                    uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     struct uart_frame_parser_expression_result* old_result = *ptr_result;
     *ptr_result = realloc(old_result,
                           offsetof(struct uart_frame_parser_expression_result, byte_array) + byte_array_size);
@@ -382,7 +402,7 @@ static int expression_result_create(struct uart_frame_parser_expression_result *
         return 1;
     } else {
         free(old_result);
-        on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "allocate a expression result failed");
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "allocate a expression result failed");
         return -6;
     }
 }
@@ -391,7 +411,7 @@ static int handle_validator_expression_result(lua_State *L, int status, int resu
                                               struct uart_frame_parser_expression *expression) {
     if (status == LUA_OK) {
         if (result_type == LUA_TBOOLEAN) {
-            int ret = expression_result_create(&expression->result, 0, expression->expression_engine->on_error);
+            int ret = expression_result_create(&expression->result, 0, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             if (ret > 0) {
                 expression->result->type = expression->type;
                 expression->result->boolean = lua_toboolean(L, -1);
@@ -400,7 +420,7 @@ static int handle_validator_expression_result(lua_State *L, int status, int resu
                 return ret;
             }
         } else {
-            expression->expression_engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
+            expression->expression_engine->on_error(expression->expression_engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
                                                     "expression %s type: boolean, actual data type: %s",
                                                     expression->name, luaL_typename(L, -1));
             return -5;
@@ -410,7 +430,7 @@ static int handle_validator_expression_result(lua_State *L, int status, int resu
             int ret = (int) lua_tointeger(L, -1);
             return ret;
         } else {
-            handle_lua_error(L, expression->expression_engine->on_error);
+            handle_lua_error(L, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             return -2;
         }
     }
@@ -422,7 +442,7 @@ static int handle_length_expression_result(lua_State *L, int status, int result_
         if (result_type == LUA_TNUMBER) {
             long long result = lua_tointeger(L, -1);
             if (result > 0) {
-                int ret = expression_result_create(&expression->result, 0, expression->expression_engine->on_error);
+                int ret = expression_result_create(&expression->result, 0, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
                 if (ret > 0) {
                     expression->result->type = expression->type;
                     expression->result->integer = result;
@@ -432,13 +452,13 @@ static int handle_length_expression_result(lua_State *L, int status, int result_
                 }
             }
             else {
-                expression->expression_engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
+                expression->expression_engine->on_error(expression->expression_engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
                                                         "length expression %s result <= 0: %lld", expression->name,
                                                         result);
                 return -8;
             }
         } else {
-            expression->expression_engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
+            expression->expression_engine->on_error(expression->expression_engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
                                                     "expression %s type: integer, actual data type: %s",
                                                     expression->name, luaL_typename(L, -1));
             return -5;
@@ -447,7 +467,7 @@ static int handle_length_expression_result(lua_State *L, int status, int result_
         if (result_type == LUA_TNUMBER) {
             return (int) lua_tointeger(L, -1);
         } else {
-            handle_lua_error(L, expression->expression_engine->on_error);
+            handle_lua_error(L, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             return -2;
         }
     }
@@ -459,7 +479,7 @@ static int handle_default_expression_result(lua_State *L, int status, int result
         if (result_type == LUA_TSTRING) {
             size_t len;
             const char *data = lua_tolstring(L, -1, &len);
-            int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error);
+            int ret = expression_result_create(&expression->result, len, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             if (ret > 0) {
                 expression->result->type = expression->type;
                 expression->result->byte_array_size = (uint32_t)len;
@@ -469,7 +489,7 @@ static int handle_default_expression_result(lua_State *L, int status, int result
                 return ret;
             }
         } else {
-            expression->expression_engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
+            expression->expression_engine->on_error(expression->expression_engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
                                                     "expression %s type: string, actual data type: %s",
                                                     expression->name, luaL_typename(L, -1));
             return -5;
@@ -478,7 +498,7 @@ static int handle_default_expression_result(lua_State *L, int status, int result
         if (result_type == LUA_TNUMBER) {
             return (int) lua_tointeger(L, -1);
         } else {
-            handle_lua_error(L, expression->expression_engine->on_error);
+            handle_lua_error(L, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             return -2;
         }
     }
@@ -490,7 +510,7 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
         if (result_type == LUA_TSTRING) {
             size_t len;
             const char *string = lua_tolstring(L, -1, &len);
-            int ret = expression_result_create(&expression->result, len + 1, expression->expression_engine->on_error);
+            int ret = expression_result_create(&expression->result, len + 1, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             if (ret > 0) {
                 expression->result->byte_array_size = (uint32_t)(len + 1);
                 memcpy(expression->result->byte_array, string, len + 1);
@@ -500,7 +520,7 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
                 return ret;
             }
         } else {
-            expression->expression_engine->on_error(UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
+            expression->expression_engine->on_error(expression->expression_engine->user_ptr, UART_FRAME_PARSER_ERROR_LUA, __FILE__, __LINE__,
                                                     "expression %s type: string, actual data type: %s",
                                                     expression->name, luaL_typename(L, -1));
             return -5;
@@ -509,7 +529,7 @@ static int handle_tostring_expression_result(lua_State *L, int status, int resul
         if (result_type == LUA_TNUMBER) {
             return (int) lua_tointeger(L, -1);
         } else {
-            handle_lua_error(L, expression->expression_engine->on_error);
+            handle_lua_error(L, expression->expression_engine->on_error, expression->expression_engine->user_ptr);
             return -2;
         }
     }

@@ -9,7 +9,7 @@ static int next_frame(struct uart_frame_definition *frame_definition_head,
                       struct uart_frame_parser_buffer *buffer,
                       uint32_t offset,
                       uint32_t max_size,
-                      uart_frame_parser_error_callback_t on_error);
+                      uart_frame_parser_error_callback_t on_error, void* user_ptr);
 
 static void uart_frame_field_info_release(struct uart_frame_field_info *field_info_head) {
     while (field_info_head) {
@@ -20,9 +20,10 @@ static void uart_frame_field_info_release(struct uart_frame_field_info *field_in
 }
 
 static int
-parse_field(struct uart_frame_field_definition *field_definition, struct uart_frame_definition *frame_definition_head,
+parse_field(struct uart_frame_field_definition *field_definition,
+ struct uart_frame_definition *frame_definition_head,
             struct uart_frame_field_info **ptr_field_info, struct uart_frame_parser_buffer *buffer, uint32_t offset,
-            uint32_t field_offset, uint32_t max_size, uart_frame_parser_error_callback_t on_error) {
+            uint32_t field_offset, uint32_t max_size, uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     int length;
     if (field_definition->has_length_expression) {
         int result = uart_frame_parser_expression_eval(field_definition->length.expression, offset);
@@ -41,8 +42,9 @@ parse_field(struct uart_frame_field_definition *field_definition, struct uart_fr
             struct uart_frame_field_info *subframe_field_info = NULL;
             struct uart_frame_definition *subframe_definition = NULL;
             if (field_definition->has_subframes) {
-                int result = next_frame(frame_definition_head, field_definition->detected_subframe_head,
-                                        &subframe_field_info, &subframe_definition, buffer, field_offset, length, on_error);
+                int result = next_frame(frame_definition_head,
+ field_definition->detected_subframe_head,
+                                        &subframe_field_info, &subframe_definition, buffer, field_offset, length, on_error, user_ptr);
                 if (result <= 0) {
                     free(field_info);
                     return result;
@@ -59,7 +61,7 @@ parse_field(struct uart_frame_field_definition *field_definition, struct uart_fr
 
             return length;
         } else {
-            on_error(UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field info");
+            on_error(user_ptr, UART_FRAME_PARSER_ERROR_MALLOC, __FILE__, __LINE__, "cannot allocate a field info");
             return -6;
         }
     }
@@ -78,9 +80,11 @@ parse_field(struct uart_frame_field_definition *field_definition, struct uart_fr
 /// <param name="ptr_field_info">指向解析出的帧数据指针</param>
 /// <returns>-8：长度表达式小于或等于0；-7：帧格式超过max_size指定大小；-6：malloc失败；-5：表达式返回类型不对；-4：帧格式名称错误，-3：帧校验表达式不存在；-2：Lua语句执行错误；-1：需要更多数据；0：表达式校验未通过；其他非负值：解析成功，返回帧长度</returns>
 static int
-parse_frame(struct uart_frame_definition *frame_definition, struct uart_frame_definition *frame_definition_head,
-            struct uart_frame_field_info **ptr_field_info_head, struct uart_frame_parser_buffer *buffer,
-            uint32_t offset, uint32_t max_size, uart_frame_parser_error_callback_t on_error) {
+parse_frame(struct uart_frame_definition *frame_definition,
+            struct uart_frame_definition *frame_definition_head,
+            struct uart_frame_field_info **ptr_field_info_head,
+            struct uart_frame_parser_buffer *buffer,
+            uint32_t offset, uint32_t max_size, uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     int field_offset = 0;
 
     struct uart_frame_field_info *field_info_cur = NULL;
@@ -90,7 +94,7 @@ parse_frame(struct uart_frame_definition *frame_definition, struct uart_frame_de
     while (field_definition) {
         struct uart_frame_field_info *field_info;
         int field_size = parse_field(field_definition, frame_definition_head, &field_info, buffer,
-                                     offset, field_offset, max_size, on_error);
+                                     offset, field_offset, max_size, on_error, user_ptr);
         if (field_size > 0) {
             if (field_info_cur) {
                 field_info_cur = field_info_cur->next = field_info;
@@ -143,7 +147,7 @@ static int try_to_parse_the_frame(const char *frame_name, struct uart_frame_defi
                                   struct uart_frame_field_info **ptr_field_info_head,
                                   struct uart_frame_definition **ptr_frame_definition,
                                   struct uart_frame_parser_buffer *buffer, uint32_t offset, uint32_t max_size,
-                                  uart_frame_parser_error_callback_t on_error) {
+                                  uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     struct uart_frame_definition *frame_definition = find_frame_definition_by_name(frame_definition_head, frame_name);
     if (frame_definition) {
         if (frame_definition->validator_expression) {
@@ -152,7 +156,7 @@ static int try_to_parse_the_frame(const char *frame_name, struct uart_frame_defi
                 if (uart_frame_parser_expression_get_result(frame_definition->validator_expression)->boolean) {
                     *ptr_frame_definition = frame_definition;
                     return parse_frame(frame_definition, frame_definition_head,
-                                       ptr_field_info_head, buffer, offset, max_size, on_error);
+                                       ptr_field_info_head, buffer, offset, max_size, on_error, user_ptr);
                 } else {
                     return 0;
                 }
@@ -161,10 +165,10 @@ static int try_to_parse_the_frame(const char *frame_name, struct uart_frame_defi
             }
         } else {
             return parse_frame(frame_definition, frame_definition_head, ptr_field_info_head,
-                               buffer, offset, max_size, on_error);
+                               buffer, offset, max_size, on_error, user_ptr);
         }
     } else {
-        on_error(UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "frame name %s not found", frame_name);
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "frame name %s not found", frame_name);
         return -4;
     }
 }
@@ -176,12 +180,12 @@ static int try_to_parse_a_frame(struct uart_frame_definition *frame_definition_h
                                 struct uart_frame_parser_buffer *buffer,
                                 uint32_t offset,
                                 uint32_t max_size,
-                                uart_frame_parser_error_callback_t on_error) {
+                                uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     struct uart_frame_detected_frame *detected_frame = detected_frame_head;
     while (detected_frame) {
         int frame_bytes = try_to_parse_the_frame(detected_frame->name, frame_definition_head,
                                                  ptr_field_info, ptr_frame_definition, buffer, offset, max_size,
-                                                 on_error);
+                                                 on_error, user_ptr);
         if (frame_bytes) {
             return frame_bytes;
         }
@@ -199,10 +203,10 @@ static int next_frame(struct uart_frame_definition *frame_definition_head,
                       struct uart_frame_parser_buffer *buffer,
                       uint32_t offset,
                       uint32_t max_size,
-                      uart_frame_parser_error_callback_t on_error) {
+                      uart_frame_parser_error_callback_t on_error, void* user_ptr) {
     for (;;) {
         int frame_bytes = try_to_parse_a_frame(frame_definition_head, detected_frame_head, ptr_field_info,
-                                               ptr_frame_definition, buffer, offset, max_size, on_error);
+                                               ptr_frame_definition, buffer, offset, max_size, on_error, user_ptr);
         if (frame_bytes) {
             return frame_bytes;
         } else {
@@ -211,12 +215,12 @@ static int next_frame(struct uart_frame_definition *frame_definition_head,
     }
 }
 
-int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data, uint32_t size, void *user_ptr) {
+int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data, uint32_t size) {
     uart_frame_parser_buffer_append(parser->buffer, data, size);
 
     if (parser->last_field_info_head && parser->last_frame_definition) {
         if (parser->last_frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
-            parser->on_data(parser->buffer, parser->last_frame_definition, parser->last_frame_bytes, parser->last_field_info_head, user_ptr);
+            parser->on_data(parser->buffer, parser->last_frame_definition, parser->last_frame_bytes, parser->last_field_info_head, parser->user_ptr);
             parser->last_frame_bytes = 0;
             parser->last_field_info_head = NULL;
             parser->last_frame_definition = NULL;
@@ -229,10 +233,10 @@ int uart_frame_parser_feed_data(struct uart_frame_parser *parser, uint8_t *data,
         struct uart_frame_field_info *field_info_head;
         struct uart_frame_definition *frame_definition;
         int frame_bytes = next_frame(parser->frame_definition_head, parser->detected_frame_head, &field_info_head,
-                                     &frame_definition, parser->buffer, 0, 0, parser->on_error);
+                                     &frame_definition, parser->buffer, 0, 0, parser->on_error, parser->user_ptr);
         if (frame_bytes > 0) {
             if ((uint32_t)frame_bytes <= uart_frame_parser_buffer_get_size(parser->buffer)) {
-                parser->on_data(parser->buffer, frame_definition, frame_bytes, field_info_head, user_ptr);
+                parser->on_data(parser->buffer, frame_definition, frame_bytes, field_info_head, parser->user_ptr);
                 uart_frame_parser_buffer_increase_origin(parser->buffer, frame_bytes);
             } else {
                 parser->last_frame_bytes = frame_bytes;
