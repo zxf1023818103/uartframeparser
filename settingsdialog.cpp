@@ -1,0 +1,118 @@
+#include "settingsdialog.h"
+#include "ui_settingsdialog.h"
+#include <QVariant>
+#include <QFile>
+
+SettingsDialog::SettingsDialog(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::SettingsDialog)
+{
+    ui->setupUi(this);
+    m_fileDialog = new QFileDialog(this);
+    m_fileDialog->setMimeTypeFilters({"application/json"});
+    refreshSerialPortList();
+    connect(m_fileDialog, &QFileDialog::fileSelected, this, &SettingsDialog::onSchemaFileSelected);
+    connect(ui->serialPortRefreshButton, &QPushButton::clicked, this, &SettingsDialog::refreshSerialPortList);
+    connect(ui->serialPortComboBox, &QComboBox::activated, this, &SettingsDialog::refreshSerialPortBaudRates);
+}
+
+SettingsDialog::~SettingsDialog()
+{
+    delete ui;
+}
+
+QSerialPort *SettingsDialog::serialPort()
+{
+    return m_serialPort;
+}
+
+const QString &SettingsDialog::schema()
+{
+    return m_schema;
+}
+
+void SettingsDialog::appendLog(const QString &topic, const QString &filename, int line, const QString &message)
+{
+    qsizetype index = filename.lastIndexOf('/');
+    if (index == -1) {
+        index = filename.lastIndexOf('\\');
+    }
+    if (index != -1) {
+        index++;
+    }
+
+    ui->logsTextEdit->appendMessage(QString("[%1][%2:%3] %4").arg(tr(topic.toLatin1()), filename.sliced(index), QVariant(line).toString(), tr(message.toLatin1())));
+    hide();
+    show();
+}
+
+void SettingsDialog::refreshSerialPortList()
+{
+    ui->serialPortComboBox->clear();
+    m_serialPortInfoList = QSerialPortInfo::availablePorts();
+    for (qsizetype i = 0; i < m_serialPortInfoList.size(); i++) {
+        ui->serialPortComboBox->addItem(m_serialPortInfoList[i].portName(), i);
+    }
+    refreshSerialPortBaudRates(0);
+}
+
+void SettingsDialog::refreshSerialPortBaudRates(int index)
+{
+    (void)index;
+
+    ui->baudRateComboBox->clear();
+    if (m_serialPortInfoList.size()) {
+        qlonglong i = ui->baudRateComboBox->currentData().toLongLong();
+        for (qint32 baudRate : m_serialPortInfoList[i].standardBaudRates()) {
+            ui->baudRateComboBox->addItem(QString("%1bps").arg(baudRate), baudRate);
+        }
+    }
+}
+
+void SettingsDialog::onSerialPortErrorOccurred(QSerialPort::SerialPortError error)
+{
+    (void)error;
+    appendLog("Serial", __FILE__, __LINE__, m_serialPort->errorString());
+}
+
+void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
+{
+    ui->schemaFilePathLineEdit->setText(schemaFileName);
+}
+
+void SettingsDialog::on_schemaFileOpenButton_clicked()
+{
+    m_fileDialog->hide();
+    m_fileDialog->show();
+}
+
+void SettingsDialog::on_buttonBox_accepted()
+{
+    const QVariant& serialPortIndex = ui->serialPortComboBox->currentData();
+    const QVariant& baudRateData = ui->baudRateComboBox->currentData();
+    if (serialPortIndex.isValid() && baudRateData.isValid()) {
+        if (m_serialPort) {
+            delete(m_serialPort);
+        }
+        m_serialPort = new QSerialPort(m_serialPortInfoList[serialPortIndex.toLongLong()], this);
+        m_serialPort->setBaudRate(baudRateData.toInt());
+        connect(m_serialPort, &QSerialPort::errorOccurred, this, &SettingsDialog::onSerialPortErrorOccurred, Qt::UniqueConnection);
+        const QString &filename = ui->schemaFilePathLineEdit->text();
+        if (filename.size()) {
+            QByteArray content = QFile(filename).readAll();
+            if (content.size()) {
+                m_schema = QString::fromUtf8(content);
+                emit settingsSaved(m_serialPort, m_schema);
+            }
+            else {
+                appendLog("Settings", __FILE__, __LINE__, "Schema file is not exist or empty");
+            }
+        }
+        else {
+            appendLog("Settings", __FILE__, __LINE__, "Schema filename is empty");
+        }
+    }
+    else {
+        appendLog("Settings", __FILE__, __LINE__, "Serial port is not selected");
+    }
+}
