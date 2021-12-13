@@ -390,7 +390,7 @@ static const char *do_read_bytecode(lua_State *L, void *ud, size_t *ptr_data_siz
 
     struct uart_frame_parser_expression *expression = ud;
     *ptr_data_size = expression->data_size;
-    return expression->data;
+    return (const char*)expression->data;
 }
 
 static int expression_result_create(struct uart_frame_parser_expression_result **ptr_result, size_t byte_array_size,

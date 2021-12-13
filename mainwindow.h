@@ -38,6 +38,10 @@ private:
 
     UartFrameParserWrapper *m_frameParser;
 
-    QStandardItemModel *m_model;
+    QStandardItemModel *m_historyViewModel;
+
+    QStandardItemModel *m_frameStructureViewModel;
+
+    QStandardItemModel *m_attributeViewModel;
 };
 #endif // MAINWINDOW_H

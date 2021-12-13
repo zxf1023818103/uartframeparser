@@ -51,13 +51,21 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QTreeView" name="frameStructureTreeView"/>
-          <widget class="QListView" name="attributeListView"/>
+          <widget class="QTreeView" name="frameStructureView">
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+          </widget>
+          <widget class="QTreeView" name="attributeView"/>
          </widget>
         </item>
        </layout>
       </widget>
-      <widget class="QListView" name="historyListView"/>
+      <widget class="QTreeView" name="historyView">
+       <property name="editTriggers">
+        <set>QAbstractItemView::NoEditTriggers</set>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -68,7 +76,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>17</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">

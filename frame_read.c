@@ -1,5 +1,6 @@
 #include "uartframeparser.h"
 #include <stdlib.h>
+#include <stddef.h>
 
 #define bitset_size(bits)         (((uint64_t)(bits) / 8) + ((uint64_t)(bits) & 0xf ? 1ull : 0ull))
 #define bitset_set(bitset, bit)   ((bitset)[(bit) / 8] |=  (1 << ((bit) % 8)))

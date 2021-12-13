@@ -11,9 +11,9 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     m_fileDialog = new QFileDialog(this);
     m_fileDialog->setMimeTypeFilters({"application/json"});
     refreshSerialPortList();
-    connect(m_fileDialog, &QFileDialog::fileSelected, this, &SettingsDialog::onSchemaFileSelected);
-    connect(ui->serialPortRefreshButton, &QPushButton::clicked, this, &SettingsDialog::refreshSerialPortList);
-    connect(ui->serialPortComboBox, &QComboBox::activated, this, &SettingsDialog::refreshSerialPortBaudRates);
+    connect(m_fileDialog, SIGNAL(fileSelected(QString)), this, SLOT(onSchemaFileSelected(QString)));
+    connect(ui->serialPortRefreshButton, SIGNAL(clicked()), this, SLOT(refreshSerialPortList()));
+    connect(ui->serialPortComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(refreshSerialPortBaudRates(int)));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -41,7 +41,7 @@ void SettingsDialog::appendLog(const QString &topic, const QString &filename, in
         index++;
     }
 
-    ui->logsTextEdit->appendMessage(QString("[%1][%2:%3] %4").arg(tr(topic.toLatin1()), filename.sliced(index), QVariant(line).toString(), tr(message.toLatin1())));
+    ui->logsTextEdit->appendMessage(QString("[%1][%2:%3] %4").arg(tr(topic.toLatin1()), filename.mid(index), QVariant(line).toString(), tr(message.toLatin1())));
     hide();
     show();
 }
