@@ -71,8 +71,9 @@ void SettingsDialog::refreshSerialPortBaudRates(int index)
 
 void SettingsDialog::onSerialPortErrorOccurred(QSerialPort::SerialPortError error)
 {
-    (void)error;
-    appendLog("Serial", __FILE__, __LINE__, m_serialPort->errorString());
+    if (error != QSerialPort::NoError) {
+        appendLog("Serial", __FILE__, __LINE__, m_serialPort->errorString());
+    }
 }
 
 void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
@@ -97,19 +98,27 @@ void SettingsDialog::on_buttonBox_accepted()
         m_serialPort = new QSerialPort(m_serialPortInfoList[serialPortIndex.toLongLong()], this);
         m_serialPort->setBaudRate(baudRateData.toInt());
         connect(m_serialPort, &QSerialPort::errorOccurred, this, &SettingsDialog::onSerialPortErrorOccurred, Qt::UniqueConnection);
-        const QString &filename = ui->schemaFilePathLineEdit->text();
-        if (filename.size()) {
-            QByteArray content = QFile(filename).readAll();
-            if (content.size()) {
-                m_schema = QString::fromUtf8(content);
-                emit settingsSaved(m_serialPort, m_schema);
+        if (m_serialPort->open(QSerialPort::ReadWrite)) {
+            const QString &filename = ui->schemaFilePathLineEdit->text();
+            if (filename.size()) {
+                QFile file(filename);
+                if (file.open(QFile::ReadOnly | QFile::Text)) {
+                    const QByteArray& content = file.readAll();
+                    if (content.size()) {
+                        m_schema = QString::fromUtf8(content);
+                        emit settingsSaved(m_serialPort, m_schema);
+                    }
+                    else {
+                        appendLog("Settings", __FILE__, __LINE__, "Schema file is empty");
+                    }
+                }
+                else {
+                    appendLog("Settings", __FILE__, __LINE__, file.errorString());
+                }
             }
             else {
-                appendLog("Settings", __FILE__, __LINE__, "Schema file is not exist or empty");
+                appendLog("Settings", __FILE__, __LINE__, "Schema filename is empty");
             }
-        }
-        else {
-            appendLog("Settings", __FILE__, __LINE__, "Schema filename is empty");
         }
     }
     else {

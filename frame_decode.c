@@ -147,5 +147,5 @@ const char* uart_frame_parser_jsonify_frame_data(void* buffer,
         free(raw);
     }
 
-    return cJSON_PrintUnformatted(data);
+    return cJSON_Print(data);
 }

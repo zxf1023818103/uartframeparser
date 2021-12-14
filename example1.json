@@ -1,71 +1,84 @@
 {
-    "$schema": "./frame.json",
-    "definitions": [
+  "$schema": "./frame.json",
+  "definitions": [
+    {
+      "name": "status_report",
+      "fields": [
         {
-            "name": "status_report",
-            "fields": [
-                {
-                    "bytes": 2,
-                    "name": "sof",
-                    "default": "return '\\x55\\xaa'",
-                    "description": "帧头"
-                },
-                {
-                    "bytes": 1,
-                    "name": "length",
-                    "description": "长度"
-                },
-                {
-                    "bytes": "return byte(3) - 4",
-                    "name": "subframe",
-                    "frames": ["subframe1", "subframe2"]
-                },
-                {
-                    "bytes": 1,
-                    "name": "checksum"
-                }
-            ],
-            "validator": "return byte(1) == 0x55 and byte(2) == 0xaa and byte(byte(3)) == (sum(1, byte(3) - 1) & 0xff)"
+          "bytes": 2,
+          "name": "sof",
+          "default": "return '\\x55\\xaa'",
+          "description": "Start of Frame"
         },
         {
-            "name": "subframe1",
-            "description": "子帧格式1",
-            "fields": [
-                {
-                    "bytes": 1,
-                    "name": "sof",
-                    "description": "帧头",
-                    "default": "return '\\x01'"
-                },
-                {
-                    "bytes": 1,
-                    "name": "working_status",
-                    "description": "工作状态"
-                }
-            ],
-            "validator": "return byte(1) == 0x01"
+          "bytes": 1,
+          "name": "length",
+          "description": "Length of Frame"
         },
         {
-            "name": "subframe2",
-            "description": "子帧格式2",
-            "fields": [
-                {
-                    "bytes": 1,
-                    "name": "sof",
-                    "description": "帧头",
-                    "default": "return '\\x02'"
-                },
-                {
-                    "bytes": 1,
-                    "name": "fan_status",
-                    "description": "风机状态"
-                }
-            ],
-            "validator": "return byte(1) == 0x02"
+          "bytes": "return byte(3) - 4",
+          "name": "subframe",
+          "frames": [ "subframe1", "subframe2" ]
+        },
+        {
+          "bytes": 1,
+          "name": "checksum",
+          "description": "Checksum"
         }
-    ],
-    "frames": [
-        "status_report"
-    ],
-    "init": "function sum(from, to) result = 0; for i = from, to, 1 do result = result + byte(i) end; return result; end"
+      ],
+      "validator": "return byte(1) == 0x55 and byte(2) == 0xaa and byte(byte(3)) == (sum(1, byte(3) - 1) & 0xff)"
+    },
+    {
+      "name": "subframe1",
+      "description": "Subframe 1",
+      "fields": [
+        {
+          "bytes": 1,
+          "name": "sof",
+          "description": "Start of Frame",
+          "default": "return '\\x01'",
+          "tostring": "return 'Start of Frame'"
+        },
+        {
+          "bytes": 1,
+          "name": "working_status",
+          "description": "Working status",
+          "bitfields": [
+            {
+              "name": "fan_status",
+              "description": "Fan Status",
+              "bits": 1,
+              "tostring": "return ({'Off','On'})[(byte(2) & 1) + 1]"
+            },
+            {
+              "bits": 7
+            }
+          ]
+        }
+      ],
+      "validator": "return byte(1) == 0x01"
+    },
+    {
+      "name": "subframe2",
+      "description": "Subframe 2",
+      "fields": [
+        {
+          "bytes": 1,
+          "name": "sof",
+          "description": "Start of Frame",
+          "default": "return '\\x02'"
+        },
+        {
+          "bytes": 1,
+          "name": "fan_status",
+          "description": "Fan status"
+        }
+      ],
+      "validator": "return byte(1) == 0x02"
+    }
+  ],
+  "frames": [
+    "status_report"
+  ],
+  "init": "function sum(from, to) result = 0; for i = from, to, 1 do result = result + byte(i) end; return result; end"
 }
