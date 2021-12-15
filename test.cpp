@@ -132,7 +132,7 @@ static void on_error(void* user_ptr, enum uart_frame_parser_error_types error_ty
     const char* log_template = "%s:%d:%s: %s";
     char* format = (char*)calloc(snprintf(nullptr, 0, log_template, file, line, error_type_name[error_type], fmt) + 1, 1);
     assert(format != nullptr);
-    sprintf(format, log_template, file, line, fmt);
+    sprintf(format, log_template, file, line, error_type_name[error_type], fmt);
 
     va_list ap1, ap2;
     va_start(ap1, fmt);
@@ -280,10 +280,15 @@ namespace {
 
         ASSERT_NE(nullptr, parser);
 
-        const uint8_t data[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
-                                0x55, 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b};
+        const uint8_t data1[] = {0x55, 0xaa, 0x07, 0x01, 0x01, 0x02, 0x0a,
+                                0x55};
 
-        uart_frame_parser_feed_data(parser, (const uint8_t *)data, sizeof data);
+        const uint8_t data2[] = { 0xaa, 0x07, 0x02, 0x01, 0x02, 0x0b };
+
+        uart_frame_parser_feed_data(parser, (const uint8_t *)data1, sizeof data1);
+
+        uart_frame_parser_feed_data(parser, (const uint8_t*)data2, sizeof data2);
+
 
         uart_frame_parser_release(parser);
 
