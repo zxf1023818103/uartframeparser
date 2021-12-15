@@ -44,7 +44,7 @@ parse_field(struct uart_frame_field_definition *field_definition,
             if (field_definition->has_subframes) {
                 int result = next_frame(frame_definition_head,
  field_definition->detected_subframe_head,
-                                        &subframe_field_info, &subframe_definition, buffer, field_offset, length, on_error, user_ptr);
+                                        &subframe_field_info, &subframe_definition, buffer, offset + field_offset, length, on_error, user_ptr);
                 if (result <= 0) {
                     free(field_info);
                     return result;
