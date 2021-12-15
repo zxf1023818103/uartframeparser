@@ -53,11 +53,6 @@ struct uart_frame_parser_expression_engine {
     /// 该表达式引擎关联的预编译表达式列表
     /// </summary>
     struct uart_frame_parser_expression *expression_head;
-
-    /// <summary>
-    /// 最后一次执行的预编译表达式
-    /// </summary>
-    struct uart_frame_parser_expression *last_expression;
 };
 
 /// <summary>
@@ -120,6 +115,7 @@ static int l_byte(lua_State *L) {
     if (lua_gettop(L) == 1) {
         int is_num;
         lua_Integer index = lua_tointegerx(L, -1, &is_num);
+        lua_pop(L, 1);
         if (is_num) {
             if (index > 0) {
                 lua_pushlightuserdata(L, (void *) OFFSET_INDEX);
@@ -547,12 +543,9 @@ int uart_frame_parser_expression_eval(struct uart_frame_parser_expression *expre
     lua_pushinteger(L, offset);
     lua_settable(L, LUA_REGISTRYINDEX);
 
-    if (expression->expression_engine->last_expression != expression) {
-        lua_settop(L, 0);
-        lua_load(L, do_read_bytecode, expression, expression->name, NULL);
-        expression->expression_engine->last_expression = expression;
-    }
-
+    lua_settop(L, 0);
+    lua_load(L, do_read_bytecode, expression, expression->name, NULL);
+    
     int ret = -9;
     int status = lua_pcall(L, 0, 1, 0);
     int result_type = lua_type(L, lua_gettop(L));
