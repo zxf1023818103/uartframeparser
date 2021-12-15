@@ -25,6 +25,8 @@ private slots:
 
     void onHistoryListViewActivated(const QModelIndex &index);
 
+    void onFrameStructureViewActivated(const QModelIndex &index);
+
     void onSerialPortReadyRead();
 
     void on_actionExit_triggered();

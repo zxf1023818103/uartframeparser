@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -29,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_frameParser, SIGNAL(errorOccurred(QString, QString, int, QString)), m_settingsDialog, SLOT(appendLog(QString, QString, int, QString)));
     connect(m_frameParser, SIGNAL(frameReceived(QJsonDocument)), this, SLOT(onFrameReceived(QJsonDocument)));
     connect(ui->historyView, SIGNAL(activated(QModelIndex)), this, SLOT(onHistoryListViewActivated(QModelIndex)));
+    connect(ui->frameStructureView, SIGNAL(activated(QModelIndex)), this, SLOT(onFrameStructureViewActivated(QModelIndex)));
 }
 
 MainWindow::~MainWindow()
@@ -46,9 +48,11 @@ void MainWindow::onFrameReceived(const QJsonDocument &frameData)
 {
     const QJsonObject& frameObject = frameData.object();
     QStandardItem* dateItem = new QStandardItem(QDateTime::currentDateTime().toString());
-    dateItem->setData(frameData);
     QStandardItem* directionItem = new QStandardItem(tr("Receive"));
-    QStandardItem* hexDataItem = new QStandardItem(frameObject.value("hex").toString());
+    QStandardItem* hexDataItem = new QStandardItem(frameObject.value("hex").toString());\
+
+    dateItem->setData(frameData);
+
     m_historyViewModel->appendRow({ dateItem, directionItem , hexDataItem });
 }
 
@@ -60,6 +64,9 @@ QList<QStandardItem*> buildBitfieldStructureItems(const QJsonObject& bitfieldJso
     QStandardItem* nameItem = new QStandardItem(bitfieldJsonObject["name"].toString());
     QStandardItem* hexDataItem = new QStandardItem(bitfieldJsonObject["hex"].toString());
     QStandardItem* decodedStringItem = new QStandardItem(bitfieldJsonObject["text"].toString());
+
+    nameItem->setData(bitfieldJsonObject);
+
     return { nameItem, hexDataItem, decodedStringItem };
 }
 
@@ -67,6 +74,8 @@ QList<QStandardItem*> buildFieldStructureItems(const QJsonObject& fieldJsonObejc
     QStandardItem* nameItem = new QStandardItem(fieldJsonObejct["name"].toString());
     QStandardItem* hexDataItem = new QStandardItem(fieldJsonObejct["hex"].toString());
     QStandardItem* decodedStringItem = new QStandardItem(fieldJsonObejct["text"].toString());
+
+    nameItem->setData(fieldJsonObejct);
 
     const QJsonObject::const_iterator& subframeIter = fieldJsonObejct.find("subframe");
     if (subframeIter != fieldJsonObejct.end()) {
@@ -94,7 +103,9 @@ QList<QStandardItem*> buildFieldStructureItems(const QJsonObject& fieldJsonObejc
 QList<QStandardItem*> buildFrameStructureItems(const QJsonObject& frameJsonObject) {
     QStandardItem* nameItem = new QStandardItem(frameJsonObject["name"].toString());
     QStandardItem* hexDataItem = new QStandardItem(frameJsonObject["hex"].toString());
-    QStandardItem* decodedStringItem = new QStandardItem(frameJsonObject["description"].toString());
+    QStandardItem* decodedStringItem = new QStandardItem(frameJsonObject["text"].toString());
+
+    nameItem->setData(frameJsonObject);
 
     const QJsonArray& fieldsJsonArray = frameJsonObject["data"].toArray();
     for (qsizetype i = 0; i < fieldsJsonArray.size(); i++) {
@@ -107,16 +118,39 @@ QList<QStandardItem*> buildFrameStructureItems(const QJsonObject& frameJsonObjec
     return { nameItem, hexDataItem, decodedStringItem };
 }
 
+QList<QList<QStandardItem*>> buildAttributeItems(const QJsonObject& jsonObject) {
+    QList<QList<QStandardItem*>> result;
+    for (QJsonObject::const_iterator i = jsonObject.constBegin(); i != jsonObject.constEnd(); i++) {
+        QJsonValue::Type type = i->type();
+        if (type != QJsonValue::Type::Object && type != QJsonValue::Type::Array) {
+            QList<QStandardItem*> item = { new QStandardItem(i.key()), new QStandardItem(i->toVariant().toString()) };
+            result.append(item);
+        }
+    }
+    return result;
+}
+
 } /// anonymous namespace
 
 void MainWindow::onHistoryListViewActivated(const QModelIndex &index)
 {
-    const QJsonObject& frameJsonObejct = index.siblingAtRow(0).data().toJsonDocument().object();
     m_frameStructureViewModel->removeRows(0, m_frameStructureViewModel->rowCount());
+    m_attributeViewModel->removeRows(0, m_attributeViewModel->rowCount());
 
-    const QList<QStandardItem*>& frameData = buildFrameStructureItems(frameJsonObejct);
+    const QList<QStandardItem*>& frameData = buildFrameStructureItems(index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
     for (qsizetype i = 0; i < frameData.size(); i++) {
         m_frameStructureViewModel->setItem(0, i, frameData[i]);
+    }
+}
+
+void MainWindow::onFrameStructureViewActivated(const QModelIndex &index)
+{
+    m_attributeViewModel->removeRows(0, m_attributeViewModel->rowCount());
+
+    const QList<QList<QStandardItem*>>& attributeData = buildAttributeItems(index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
+    for (qsizetype i = 0; i < attributeData.size(); i++) {
+        for (qsizetype j = 0; j < attributeData[i].size(); j++)
+        m_attributeViewModel->setItem(i, j, attributeData[i][j]);
     }
 }
 
