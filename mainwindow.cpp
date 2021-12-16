@@ -152,6 +152,7 @@ void MainWindow::onHistoryListViewActivated(const QModelIndex &index)
         for (qsizetype i = 0; i < frameData.size(); i++) {
             m_frameStructureViewModel->setItem(0, i, frameData[i]);
         }
+        ui->frameStructureView->expandAll();
         ui->tabWidget->setCurrentWidget(ui->receivingTab);
     }
     else {
