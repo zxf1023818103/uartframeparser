@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QStandardItemModel>
+#include <QRegularExpressionValidator>
 #include "settingsdialog.h"
 #include "uartframeparserwrapper.h"
 
@@ -27,11 +28,21 @@ private slots:
 
     void onFrameStructureViewActivated(const QModelIndex &index);
 
+    void onSendingDataItemChanged(QStandardItem* item);
+
     void onSerialPortReadyRead();
 
     void on_actionExit_triggered();
 
     void on_actionSettings_triggered();
+
+    void on_addByteButton_clicked();
+
+    void on_removeByteButton_clicked();
+
+    void on_sendButton_clicked();
+
+    void on_insertByteButton_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -45,5 +56,9 @@ private:
     QStandardItemModel *m_frameStructureViewModel;
 
     QStandardItemModel *m_attributeViewModel;
+
+    QStandardItemModel *m_sendingDataViewModel;
+
+    QRegularExpressionValidator *m_validator;
 };
 #endif // MAINWINDOW_H

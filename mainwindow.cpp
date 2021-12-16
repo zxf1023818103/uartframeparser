@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDebug>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -23,12 +24,20 @@ MainWindow::MainWindow(QWidget *parent)
     m_attributeViewModel->setHorizontalHeaderLabels({ tr("Attribute"), tr("Value") });
     ui->attributeView->setModel(m_attributeViewModel);
 
+    m_sendingDataViewModel = new QStandardItemModel(ui->sendingDataView);
+    m_sendingDataViewModel->setHorizontalHeaderLabels({ tr("Byte") });
+    ui->sendingDataView->setModel(m_sendingDataViewModel);
+
     m_settingsDialog = new SettingsDialog(this);
     m_frameParser = new UartFrameParserWrapper(this);
+
+
+    m_validator = new QRegularExpressionValidator(QRegularExpression(R"_([0-9a-fA-F]{2})_"), this);
 
     connect(m_settingsDialog, SIGNAL(settingsSaved(QSerialPort*, QString)), this, SLOT(onSettingsSaved(QSerialPort*, QString)));
     connect(m_frameParser, SIGNAL(errorOccurred(QString, QString, int, QString)), m_settingsDialog, SLOT(appendLog(QString, QString, int, QString)));
     connect(m_frameParser, SIGNAL(frameReceived(QJsonDocument)), this, SLOT(onFrameReceived(QJsonDocument)));
+    connect(m_sendingDataViewModel, SIGNAL(itemChanged(QStandardItem*)), this, SLOT(onSendingDataItemChanged(QStandardItem*)));
     connect(ui->historyView, SIGNAL(activated(QModelIndex)), this, SLOT(onHistoryListViewActivated(QModelIndex)));
     connect(ui->frameStructureView, SIGNAL(activated(QModelIndex)), this, SLOT(onFrameStructureViewActivated(QModelIndex)));
 }
@@ -49,7 +58,7 @@ void MainWindow::onFrameReceived(const QJsonDocument &frameData)
     const QJsonObject& frameObject = frameData.object();
     QStandardItem* dateItem = new QStandardItem(QDateTime::currentDateTime().toString());
     QStandardItem* directionItem = new QStandardItem(tr("Receive"));
-    QStandardItem* hexDataItem = new QStandardItem(frameObject.value("hex").toString());\
+    QStandardItem* hexDataItem = new QStandardItem(frameObject.value("hex").toString());
 
     dateItem->setData(frameData);
 
@@ -61,9 +70,9 @@ namespace {
 QList<QStandardItem*> buildFrameStructureItems(const QJsonObject& frameJsonObject);
 
 QList<QStandardItem*> buildBitfieldStructureItems(const QJsonObject& bitfieldJsonObject) {
-    QStandardItem* nameItem = new QStandardItem(bitfieldJsonObject["name"].toString());
-    QStandardItem* hexDataItem = new QStandardItem(bitfieldJsonObject["hex"].toString());
-    QStandardItem* decodedStringItem = new QStandardItem(bitfieldJsonObject["text"].toString());
+    QStandardItem* nameItem = new QStandardItem(QString::fromUtf8(bitfieldJsonObject["name"].toString().toUtf8()));
+    QStandardItem* hexDataItem = new QStandardItem(QString::fromUtf8(bitfieldJsonObject["hex"].toString().toUtf8()));
+    QStandardItem* decodedStringItem = new QStandardItem(QString::fromUtf8(bitfieldJsonObject["text"].toString().toUtf8()));
 
     nameItem->setData(bitfieldJsonObject);
 
@@ -71,9 +80,9 @@ QList<QStandardItem*> buildBitfieldStructureItems(const QJsonObject& bitfieldJso
 }
 
 QList<QStandardItem*> buildFieldStructureItems(const QJsonObject& fieldJsonObejct) {
-    QStandardItem* nameItem = new QStandardItem(fieldJsonObejct["name"].toString());
-    QStandardItem* hexDataItem = new QStandardItem(fieldJsonObejct["hex"].toString());
-    QStandardItem* decodedStringItem = new QStandardItem(fieldJsonObejct["text"].toString());
+    QStandardItem* nameItem = new QStandardItem(QString::fromUtf8(fieldJsonObejct["name"].toString().toUtf8()));
+    QStandardItem* hexDataItem = new QStandardItem(QString::fromUtf8(fieldJsonObejct["hex"].toString().toUtf8()));
+    QStandardItem* decodedStringItem = new QStandardItem(QString::fromUtf8(fieldJsonObejct["text"].toString().toUtf8()));
 
     nameItem->setData(fieldJsonObejct);
 
@@ -101,9 +110,9 @@ QList<QStandardItem*> buildFieldStructureItems(const QJsonObject& fieldJsonObejc
 }
 
 QList<QStandardItem*> buildFrameStructureItems(const QJsonObject& frameJsonObject) {
-    QStandardItem* nameItem = new QStandardItem(frameJsonObject["name"].toString());
-    QStandardItem* hexDataItem = new QStandardItem(frameJsonObject["hex"].toString());
-    QStandardItem* decodedStringItem = new QStandardItem(frameJsonObject["text"].toString());
+    QStandardItem* nameItem = new QStandardItem(QString::fromUtf8(frameJsonObject["name"].toString().toUtf8()));
+    QStandardItem* hexDataItem = new QStandardItem(QString::fromUtf8(frameJsonObject["hex"].toString().toUtf8()));
+    QStandardItem* decodedStringItem = new QStandardItem(QString::fromUtf8(frameJsonObject["text"].toString().toUtf8()));
 
     nameItem->setData(frameJsonObject);
 
@@ -123,7 +132,7 @@ QList<QList<QStandardItem*>> buildAttributeItems(const QJsonObject& jsonObject) 
     for (QJsonObject::const_iterator i = jsonObject.constBegin(); i != jsonObject.constEnd(); i++) {
         QJsonValue::Type type = i->type();
         if (type != QJsonValue::Type::Object && type != QJsonValue::Type::Array) {
-            QList<QStandardItem*> item = { new QStandardItem(i.key()), new QStandardItem(i->toVariant().toString()) };
+            QList<QStandardItem*> item = { new QStandardItem(i.key()), new QStandardItem(QString::fromUtf8(i->toVariant().toString().toUtf8())) };
             result.append(item);
         }
     }
@@ -134,12 +143,15 @@ QList<QList<QStandardItem*>> buildAttributeItems(const QJsonObject& jsonObject) 
 
 void MainWindow::onHistoryListViewActivated(const QModelIndex &index)
 {
-    m_frameStructureViewModel->removeRows(0, m_frameStructureViewModel->rowCount());
-    m_attributeViewModel->removeRows(0, m_attributeViewModel->rowCount());
+    QJsonObject object = index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject();
+    if (object.size() != 0) {
+        m_frameStructureViewModel->removeRows(0, m_frameStructureViewModel->rowCount());
+        m_attributeViewModel->removeRows(0, m_attributeViewModel->rowCount());
 
-    const QList<QStandardItem*>& frameData = buildFrameStructureItems(index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
-    for (qsizetype i = 0; i < frameData.size(); i++) {
-        m_frameStructureViewModel->setItem(0, i, frameData[i]);
+        const QList<QStandardItem*>& frameData = buildFrameStructureItems(object);
+        for (qsizetype i = 0; i < frameData.size(); i++) {
+            m_frameStructureViewModel->setItem(0, i, frameData[i]);
+        }
     }
 }
 
@@ -151,6 +163,15 @@ void MainWindow::onFrameStructureViewActivated(const QModelIndex &index)
     for (qsizetype i = 0; i < attributeData.size(); i++) {
         for (qsizetype j = 0; j < attributeData[i].size(); j++)
         m_attributeViewModel->setItem(i, j, attributeData[i][j]);
+    }
+}
+
+void MainWindow::onSendingDataItemChanged(QStandardItem *item)
+{
+    int pos = 0;
+    QString text = item->text();
+    if (m_validator->validate(text, pos) != QValidator::State::Acceptable) {
+        item->setText("00");
     }
 }
 
@@ -168,4 +189,47 @@ void MainWindow::on_actionSettings_triggered()
 {
     m_settingsDialog->hide();
     m_settingsDialog->show();
+}
+
+void MainWindow::on_addByteButton_clicked()
+{
+    QStandardItem* item = new QStandardItem("00");
+    m_sendingDataViewModel->appendRow(item);
+}
+
+void MainWindow::on_removeByteButton_clicked()
+{
+    const QModelIndex index = ui->sendingDataView->selectionModel()->currentIndex();
+    m_sendingDataViewModel->removeRow(index.row(), index.parent());
+}
+
+void MainWindow::on_sendButton_clicked()
+{
+    QByteArray sendData;
+    for (int i = 0; i < m_sendingDataViewModel->rowCount(); i++) {
+        QString data = m_sendingDataViewModel->item(i)->text();
+        sendData.append((char)data.toUShort(nullptr, 16));
+    }
+    if (sendData.size() != 0) {
+        QSerialPort* serialPort = m_settingsDialog->serialPort();
+        if (serialPort) {
+            if (serialPort->write(sendData) != -1) {
+                QStandardItem* dateItem = new QStandardItem(QDateTime::currentDateTime().toString());
+                QStandardItem* directionItem = new QStandardItem(tr("Send"));
+                QStandardItem* hexDataItem = new QStandardItem(sendData.toHex());
+                m_historyViewModel->appendRow({ dateItem, directionItem , hexDataItem });
+            }
+        }
+    }
+}
+
+void MainWindow::on_insertByteButton_clicked()
+{
+    const QModelIndex index = ui->sendingDataView->selectionModel()->currentIndex();
+    if (index.isValid()) {
+        m_sendingDataViewModel->insertRow(index.row(), new QStandardItem("00"));
+    }
+    else {
+        on_addByteButton_clicked();
+    }
 }

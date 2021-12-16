@@ -5,99 +5,121 @@
     <name>MainWindow</name>
     <message>
         <location filename="mainwindow.ui" line="14"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="144"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="145"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="118"/>
         <source>UART Frame Parser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="97"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="152"/>
+        <location filename="mainwindow.ui" line="101"/>
+        <location filename="mainwindow.ui" line="168"/>
+        <location filename="mainwindow.cpp" line="218"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="153"/>
         <source>Send</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="121"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="153"/>
+        <location filename="mainwindow.ui" line="147"/>
+        <source>Add Byte</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="mainwindow.ui" line="154"/>
+        <source>Insert Byte</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="mainwindow.ui" line="161"/>
+        <source>Remove Byte</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="mainwindow.ui" line="197"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="154"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="125"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="129"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="154"/>
+        <location filename="mainwindow.ui" line="205"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="155"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="126"/>
         <source>Help</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="139"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="145"/>
+        <location filename="mainwindow.ui" line="215"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="146"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="119"/>
         <source>Exit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="142"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="147"/>
+        <location filename="mainwindow.ui" line="218"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="148"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="121"/>
         <source>Ctrl+Q</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="147"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="149"/>
+        <location filename="mainwindow.ui" line="223"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="150"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="123"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.ui" line="152"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="150"/>
+        <location filename="mainwindow.ui" line="228"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="151"/>
         <location filename="out/build/x64-Release/quartframeparser_autogen/include/ui_mainwindow.h" line="124"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="15"/>
-        <source>Time</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="mainwindow.cpp" line="15"/>
+        <location filename="mainwindow.cpp" line="16"/>
         <source>Direction</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="15"/>
-        <location filename="mainwindow.cpp" line="19"/>
+        <location filename="mainwindow.cpp" line="16"/>
+        <location filename="mainwindow.cpp" line="20"/>
         <source>Hex Data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="19"/>
+        <location filename="mainwindow.cpp" line="16"/>
+        <source>Time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="20"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="19"/>
+        <location filename="mainwindow.cpp" line="20"/>
         <source>Decoded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="23"/>
+        <location filename="mainwindow.cpp" line="24"/>
         <source>Attribute</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="23"/>
+        <location filename="mainwindow.cpp" line="24"/>
         <source>Value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="mainwindow.cpp" line="28"/>
+        <source>Byte</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="mainwindow.ui" line="44"/>
-        <location filename="mainwindow.cpp" line="51"/>
-        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="151"/>
+        <location filename="mainwindow.cpp" line="60"/>
+        <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="152"/>
         <source>Receive</source>
         <oldsource>Received</oldsource>
         <translation type="unfinished"></translation>
