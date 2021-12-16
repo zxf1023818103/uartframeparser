@@ -152,6 +152,16 @@ void MainWindow::onHistoryListViewActivated(const QModelIndex &index)
         for (qsizetype i = 0; i < frameData.size(); i++) {
             m_frameStructureViewModel->setItem(0, i, frameData[i]);
         }
+        ui->tabWidget->setCurrentWidget(ui->receivingTab);
+    }
+    else {
+        QString text = m_historyViewModel->itemFromIndex(index.siblingAtColumn(2))->text();
+        m_sendingDataViewModel->removeRows(0, m_sendingDataViewModel->rowCount());
+
+        for (qsizetype i = 0; i < text.size(); i += 2) {
+            m_sendingDataViewModel->appendRow(new QStandardItem(text.mid(i, 2)));
+        }
+        ui->tabWidget->setCurrentWidget(ui->sendingTab);
     }
 }
 

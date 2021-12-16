@@ -13,7 +13,7 @@
     <message>
         <location filename="mainwindow.ui" line="101"/>
         <location filename="mainwindow.ui" line="168"/>
-        <location filename="mainwindow.cpp" line="218"/>
+        <location filename="mainwindow.cpp" line="228"/>
         <location filename="out/build/x64-Debug/quartframeparserd_autogen/include/ui_mainwindow.h" line="153"/>
         <source>Send</source>
         <translation type="unfinished"></translation>
