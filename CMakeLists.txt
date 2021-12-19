@@ -111,7 +111,7 @@ if (${GTEST_FOUND})
 
     add_executable(${UARTFRAMEPARSER_TEST_NAME} "test.cpp")
 
-    target_include_directories(${UARTFRAMEPARSER_TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIR})
+    target_include_directories(${UARTFRAMEPARSER_TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIRS})
     target_link_libraries(${UARTFRAMEPARSER_TEST_NAME} PRIVATE GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main ${LIBUARTFRAMEPARSER_NAME})
 
     enable_testing()
