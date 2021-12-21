@@ -1,0 +1,24 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "quartframeparser.exe",
+      "name": "quartframeparser.exe",
+      "env": {
+        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\Users\\tuya\\vcpkg\\installed\\x64-windows\\Qt6\\plugins\\platforms"
+      }
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "quartframeparserd.exe",
+      "name": "quartframeparserd.exe",
+      "env": {
+        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\Users\\tuya\\vcpkg\\installed\\x64-windows\\debug\\Qt6\\plugins\\platforms"
+      }
+    }
+  ]
+}
