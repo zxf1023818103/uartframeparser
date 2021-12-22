@@ -18,7 +18,7 @@ UartFrameParserWrapper::~UartFrameParserWrapper()
 
 namespace {
 
-void __stdcall onError(void* user_ptr, enum uart_frame_parser_error_types error_type, const char* file, int line, const char* fmt, ...) {
+void onError(void* user_ptr, enum uart_frame_parser_error_types error_type, const char* file, int line, const char* fmt, ...) {
     UartFrameParserWrapper *parser = static_cast<UartFrameParserWrapper*>(user_ptr);
 
     QString topic;
@@ -53,7 +53,7 @@ void __stdcall onError(void* user_ptr, enum uart_frame_parser_error_types error_
     emit parser->errorOccurred(topic, file, line, message);
 }
 
-void __stdcall onData(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
+void onData(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
             void* user_ptr) {
     UartFrameParserWrapper *parser = static_cast<UartFrameParserWrapper*>(user_ptr);
     struct uart_frame_field_data* field_data_head = uart_frame_parser_read_concerned_fields(buffer, field_info_head, NULL, onError, user_ptr);
