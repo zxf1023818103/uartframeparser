@@ -4,7 +4,7 @@
 
 ### 1. 安装 Visual Studio Community 2022
 
-(下载 Visual Studio Community 2022 安装程序)[https://visualstudio.microsoft.com/zh-hans/vs/community/]并打开，勾选工作负荷选项卡中的“使用 C++ 的桌面开发”、单个组件选项卡中的“适用于 Windows 的 Git”和语言包选项卡中的“英语”，安装并重启系统。
+[下载 Visual Studio Community 2022 安装程序](https://visualstudio.microsoft.com/zh-hans/vs/community/)并打开，勾选工作负荷选项卡中的“使用 C++ 的桌面开发”、单个组件选项卡中的“适用于 Windows 的 Git”和语言包选项卡中的“英语”，安装并重启系统。
 
 ![安装 Visual Studio](./doc/安装 Visual Studio.png)
 
