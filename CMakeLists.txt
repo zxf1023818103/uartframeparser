@@ -17,16 +17,18 @@ else()
     set (UARTFRAMEPARSER_TEST_NAME "uartframeparsertest")
 endif()
 
+include_directories("include")
+
 # 将源代码添加到此项目的可执行文件。
-add_library(${LIBUARTFRAMEPARSER_NAME} STATIC "config_parse.c" "frame_parse.c" "uartframeparser.h" "buffer.c" "expression.c" "frame_read.c" "frame_decode.c")
+add_library(${LIBUARTFRAMEPARSER_NAME} STATIC "lib/config_parse.c" "lib/frame_parse.c" "include/uartframeparser.h" "lib/buffer.c" "lib/expression.c" "lib/frame_read.c" "lib/frame_decode.c")
 
 set(_IMPORT_PREFIX "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 find_package(cJSON REQUIRED)
 target_link_libraries(${LIBUARTFRAMEPARSER_NAME} PRIVATE cjson)
 
 find_package(Lua REQUIRED)
-target_include_directories(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${LUA_INCLUDE_DIR})
 target_link_libraries(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${LUA_LIBRARIES})
+target_include_directories(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${LUA_INCLUDE_DIR})
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets LinguistTools SerialPort)
 if (QT_FOUND)
@@ -44,20 +46,20 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets LinguistTools SerialPort REQUIR
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets LinguistTools SerialPort REQUIRED)
 find_package(Qt6UiPlugin CONFIG REQUIRED)
 
-set(TS_FILES uartframeparser_zh_CN.ts)
+set(TS_FILES src/uartframeparser_zh_CN.ts)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
-        settingsdialog.cpp
-        settingsdialog.h
-        settingsdialog.ui
-        logtextedit.cpp
-        logtextedit.h
-        uartframeparserwrapper.cpp
-        uartframeparserwrapper.h
+        src/main.cpp
+        src/mainwindow.cpp
+        src/mainwindow.h
+        src/mainwindow.ui
+        src/settingsdialog.cpp
+        src/settingsdialog.h
+        src/settingsdialog.ui
+        src/logtextedit.cpp
+        src/logtextedit.h
+        src/uartframeparserwrapper.cpp
+        src/uartframeparserwrapper.h
         ${TS_FILES}
 )
 
@@ -109,7 +111,7 @@ find_package(GTest)
 
 if (${GTEST_FOUND})
 
-    add_executable(${UARTFRAMEPARSER_TEST_NAME} "test.cpp")
+    add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/test.cpp")
 
     target_include_directories(${UARTFRAMEPARSER_TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIRS})
     target_link_libraries(${UARTFRAMEPARSER_TEST_NAME} PRIVATE GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main ${LIBUARTFRAMEPARSER_NAME})
