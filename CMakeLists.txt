@@ -44,7 +44,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets LinguistTools SerialPort REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets LinguistTools SerialPort REQUIRED)
-find_package(Qt6UiPlugin CONFIG REQUIRED)
 
 set(TS_FILES src/uartframeparser_zh_CN.ts)
 
