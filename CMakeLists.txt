@@ -2,6 +2,14 @@
 
 project("uartframeparser")
 
+include(FetchContent)
+FetchContent_Declare(vcpkg
+    vcpkg
+    URL "https://github.com/microsoft/vcpkg/archive/master.zip")
+FetchContent_MakeAvailable(vcpkg)
+set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake
+  CACHE STRING "Vcpkg toolchain file")
+
 # 禁用 MSVC 的使用不安全 C 语言标准库函数时弹出的警告
 if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -17,7 +25,7 @@ else()
     set (UARTFRAMEPARSER_TEST_NAME "uartframeparsertest")
 endif()
 
-include_directories("include")
+include_directories("include" "src")
 
 # 将源代码添加到此项目的可执行文件。
 add_library(${LIBUARTFRAMEPARSER_NAME} STATIC "lib/config_parse.c" "lib/frame_parse.c" "include/uartframeparser.h" "lib/buffer.c" "lib/expression.c" "lib/frame_read.c" "lib/frame_decode.c")
