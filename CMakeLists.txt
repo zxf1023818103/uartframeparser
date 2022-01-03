@@ -26,13 +26,7 @@ FetchContent_Populate(lua)
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/lua/CMakeLists.txt DESTINATION ${lua_SOURCE_DIR})
 add_subdirectory(${lua_SOURCE_DIR} ${lua_BINARY_DIR})
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    set (LIBUARTFRAMEPARSER_NAME "uartframeparserd")
-    set (UARTFRAMEPARSER_TEST_NAME "uartframeparsertestd")
-else()
-    set (LIBUARTFRAMEPARSER_NAME "uartframeparser")
-    set (UARTFRAMEPARSER_TEST_NAME "uartframeparsertest")
-endif()
+set (LIBUARTFRAMEPARSER_NAME "uartframeparser")
 
 include_directories("include" "src")
 
