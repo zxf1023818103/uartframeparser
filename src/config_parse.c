@@ -1,6 +1,6 @@
 ﻿#include <stdlib.h>
 #include <string.h>
-#include <cjson/cJSON.h>
+#include <cJSON.h>
 #include "uartframeparser.h"
 
 static void uart_frame_detected_frame_release(struct uart_frame_detected_frame *detected_frame_head) {
