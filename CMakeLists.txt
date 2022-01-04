@@ -42,15 +42,19 @@ include_directories("include" "src")
 # 将源代码添加到此项目的可执行文件。
 add_library(${LIBUARTFRAMEPARSER_NAME} "src/config_parse.c" "src/frame_parse.c" "include/uartframeparser.h" "src/buffer.c" "src/expression.c" "src/frame_read.c" "src/frame_decode.c" "test/test.cpp")
 
-#target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE cjson)
-target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE lua)
-target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE gtestd)
-target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE gtest_maind)
-target_include_directories(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${cjson_SOURCE_DIR} ${lua_SOURCE_DIR} ${googletest_SOURCE_DIR})
-
 if (MSVC)
-  target_compile_definitions(${LIBUARTFRAMEPARSER_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(${LIBUARTFRAMEPARSER_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
+
+if (MSVC AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PUBLIC cjson LINK_PRIVATE lua LINK_PRIVATE gtestd LINK_PRIVATE gtest_maind)
+else()
+    target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PUBLIC cjson LINK_PRIVATE lua LINK_PRIVATE gtest LINK_PRIVATE gtest_main)
+endif()
+
+target_include_directories(${LIBUARTFRAMEPARSER_NAME} PUBLIC ${cjson_SOURCE_DIR} PRIVATE ${lua_SOURCE_DIR} PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
+
+set_property(TARGET ${LIBUARTFRAMEPARSER_NAME} PROPERTY CXX_STANDARD 11)
 
 add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/main.c")
 target_link_libraries(${UARTFRAMEPARSER_TEST_NAME} LINK_PRIVATE ${LIBUARTFRAMEPARSER_NAME})

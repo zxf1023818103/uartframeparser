@@ -2,7 +2,7 @@
 #include "uartframeparser.h"
 #include <string>
 #include <stdarg.h>
-#include <cjson/cJSON.h>
+#include <cJSON.h>
 
 extern "C" {
 
