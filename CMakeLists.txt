@@ -1,8 +1,10 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
-set(BUILD_SHARED_LIBS no)
-set(ENABLE_CJSON_TEST off)
-set(ENABLE_TARGET_EXPORT off)
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+set(ENABLE_CJSON_TEST OFF CACHE INTERNAL "" FORCE)
+set(CJSON_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+set(ENABLE_PUBLIC_SYMBOLS OFF CACHE INTERNAL "" FORCE)
+set(BUILD_GMOCK OFF CACHE INTERNAL "" FORCE)
 
 project("uartframeparser")
 
@@ -20,18 +22,38 @@ FetchContent_Declare(
     GIT_TAG eadd8c7178c79c814ecca9652973a9b9dd4cc71b # v5.4.3
 )
 
-FetchContent_MakeAvailable(cjson)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        703bd9caab50b139428cea1aaff9974ebee5742e # release-1.10.0
+)
+
+FetchContent_MakeAvailable(cjson googletest)
 FetchContent_Populate(lua)
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/lua/CMakeLists.txt DESTINATION ${lua_SOURCE_DIR})
 add_subdirectory(${lua_SOURCE_DIR} ${lua_BINARY_DIR})
 
 set (LIBUARTFRAMEPARSER_NAME "uartframeparser")
+set (UARTFRAMEPARSER_TEST_NAME ${LIBUARTFRAMEPARSER_NAME}test)
 
 include_directories("include" "src")
 
 # 将源代码添加到此项目的可执行文件。
-add_library(${LIBUARTFRAMEPARSER_NAME} "src/config_parse.c" "src/frame_parse.c" "include/uartframeparser.h" "src/buffer.c" "src/expression.c" "src/frame_read.c" "src/frame_decode.c")
+add_library(${LIBUARTFRAMEPARSER_NAME} "src/config_parse.c" "src/frame_parse.c" "include/uartframeparser.h" "src/buffer.c" "src/expression.c" "src/frame_read.c" "src/frame_decode.c" "test/test.cpp")
 
-target_link_libraries(${LIBUARTFRAMEPARSER_NAME} PRIVATE cjson lua)
-target_include_directories(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${cjson_SOURCE_DIR} ${lua_SOURCE_DIR})
+#target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE cjson)
+target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE lua)
+target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE gtestd)
+target_link_libraries(${LIBUARTFRAMEPARSER_NAME} LINK_PRIVATE gtest_maind)
+target_include_directories(${LIBUARTFRAMEPARSER_NAME} PRIVATE ${cjson_SOURCE_DIR} ${lua_SOURCE_DIR} ${googletest_SOURCE_DIR})
+
+if (MSVC)
+  target_compile_definitions(${LIBUARTFRAMEPARSER_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/main.c")
+target_link_libraries(${UARTFRAMEPARSER_TEST_NAME} LINK_PRIVATE ${LIBUARTFRAMEPARSER_NAME})
+
+enable_testing()
+add_test(NAME ${UARTFRAMEPARSER_TEST_NAME} COMMAND ${UARTFRAMEPARSER_TEST_NAME})

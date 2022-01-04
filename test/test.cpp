@@ -310,7 +310,7 @@ namespace {
     }
 }
 
-int main() {
+extern "C" int uart_frame_parser_test() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
 }

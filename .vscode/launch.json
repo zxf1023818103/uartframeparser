@@ -66,6 +66,9 @@
             "stopAtEntry": false,
             "program": "${workspaceFolder}/build/uartframeparsertest",
             "cwd": "${workspaceFolder}",
+            "windows": {
+                "program": "${workspaceRoot}/build/Debug/uartframeparsertest.exe"
+            },
             "osx": {
                 "MIMode": "lldb"
             },

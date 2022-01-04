@@ -568,6 +568,12 @@ const char* uart_frame_parser_jsonify_frame_data(void* buffer,
     uint32_t frame_bytes,
     struct uart_frame_field_data* field_data_head);
 
+/// <summary>
+/// 启动单元测试
+/// </summary>
+/// <returns>RUN_ALL_TESTS() 返回值</returns>
+int uart_frame_parser_test();
+
 #ifdef __cplusplus
 }
 #endif
