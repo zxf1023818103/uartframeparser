@@ -2,7 +2,7 @@
 #include "uartframeparser.h"
 #include <string>
 #include <stdarg.h>
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 
 extern "C" {
 
@@ -310,7 +310,7 @@ namespace {
     }
 }
 
-extern "C" int uart_frame_parser_test() {
+int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
 }

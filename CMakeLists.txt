@@ -3,13 +3,18 @@
 set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
 set(ENABLE_CJSON_TEST OFF CACHE INTERNAL "" FORCE)
 set(CJSON_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+set(CJSON_OVERRIDE_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
 set(ENABLE_PUBLIC_SYMBOLS OFF CACHE INTERNAL "" FORCE)
+set(ENABLE_HIDDEN_SYMBOLS ON CACHE INTERNAL "" FORCE)
 set(BUILD_GMOCK OFF CACHE INTERNAL "" FORCE)
 set(INSTALL_GTEST OFF CACHE INTERNAL "" FORCE)
+set(ENABLE_TARGET_EXPORT OFF CACHE INTERNAL "" FORCE)
 set(gtest_force_shared_crt ON CACHE INTERNAL "" FORCE)
 set(gtest_disable_pthreads ON CACHE INTERNAL "" FORCE)
 
 project("uartframeparser")
+
+option(ENABLE_TESTING OFF "Enable Testing")
 
 include(FetchContent)
 
@@ -31,7 +36,7 @@ FetchContent_Declare(
     GIT_TAG        703bd9caab50b139428cea1aaff9974ebee5742e # release-1.10.0
 )
 
-FetchContent_MakeAvailable(cjson googletest)
+FetchContent_MakeAvailable(cjson)
 FetchContent_Populate(lua)
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/lua/CMakeLists.txt DESTINATION ${lua_SOURCE_DIR})
@@ -40,29 +45,20 @@ add_subdirectory(${lua_SOURCE_DIR} ${lua_BINARY_DIR})
 set (LIBUARTFRAMEPARSER_NAME "uartframeparser")
 set (UARTFRAMEPARSER_TEST_NAME ${LIBUARTFRAMEPARSER_NAME}test)
 
-include_directories("include" "src")
+include_directories("include" "src" ${cjson_SOURCE_DIR} ${lua_SOURCE_DIR})
 
-add_library(${LIBUARTFRAMEPARSER_NAME} "src/config_parse.c" "src/frame_parse.c" "include/uartframeparser.h" "src/buffer.c" "src/expression.c" "src/frame_read.c" "src/frame_decode.c" "test/test.cpp")
+add_library(${LIBUARTFRAMEPARSER_NAME}core OBJECT "src/config_parse.c" "src/frame_parse.c" "include/uartframeparser.h" "src/buffer.c" "src/expression.c" "src/frame_read.c" "src/frame_decode.c")
+add_library(${LIBUARTFRAMEPARSER_NAME} STATIC $<TARGET_OBJECTS:${LIBUARTFRAMEPARSER_NAME}core> $<TARGET_OBJECTS:cjson> $<TARGET_OBJECTS:lua>)
 
 if (MSVC)
-    set(gtest_for)
-    target_compile_definitions(${LIBUARTFRAMEPARSER_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    set(ENABLE_TESTING ON)
+    target_compile_definitions(${LIBUARTFRAMEPARSER_NAME}core PUBLIC _CRT_SECURE_NO_WARNINGS)
 endif()
 
-target_link_libraries(${LIBUARTFRAMEPARSER_NAME}
-    LINK_PRIVATE debug gtestd
-    LINK_PRIVATE debug gtest_maind
-    LINK_PRIVATE optimized gtest
-    LINK_PRIVATE optimized gtest_main
-    LINK_PUBLIC cjson
-    LINK_PRIVATE lua
-)
-target_include_directories(${LIBUARTFRAMEPARSER_NAME} PUBLIC ${cjson_SOURCE_DIR} PRIVATE ${lua_SOURCE_DIR} PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
-
-set_property(TARGET ${LIBUARTFRAMEPARSER_NAME} PROPERTY CXX_STANDARD 11)
-
-add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/main.c")
-target_link_libraries(${UARTFRAMEPARSER_TEST_NAME} LINK_PRIVATE ${LIBUARTFRAMEPARSER_NAME})
-
-enable_testing()
-add_test(NAME ${UARTFRAMEPARSER_TEST_NAME} COMMAND ${UARTFRAMEPARSER_TEST_NAME})
+if (ENABLE_TESTING)
+    FetchContent_MakeAvailable(googletest)
+    include_directories(${googletest_SOURCE_DIR}/googletest/include)
+    add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/test.cpp" $<TARGET_OBJECTS:${LIBUARTFRAMEPARSER_NAME}core> $<TARGET_OBJECTS:lua> $<TARGET_OBJECTS:gtest>)
+    enable_testing()
+    add_test(NAME ${UARTFRAMEPARSER_TEST_NAME} COMMAND ${UARTFRAMEPARSER_TEST_NAME})
+endif()
