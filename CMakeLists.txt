@@ -39,6 +39,8 @@ FetchContent_Declare(
 
 if (ZEPHYR_BASE)
     link_libraries(zephyr_interface)
+elseif (MBED_PATH)
+    link_libraries(mbed-os)
 endif()
 
 FetchContent_MakeAvailable(cjson)
