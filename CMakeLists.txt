@@ -1,5 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
+set(ENABLE_LOCALES OFF CACHE INTERNAL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
 set(ENABLE_CJSON_TEST OFF CACHE INTERNAL "" FORCE)
 set(CJSON_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
@@ -38,6 +39,8 @@ FetchContent_Declare(
 
 if (ZEPHYR_BASE)
     link_libraries(zephyr_interface)
+elseif (MBED_PATH)
+    link_libraries(mbed-os)
 endif()
 
 FetchContent_MakeAvailable(cjson)
