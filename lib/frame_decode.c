@@ -149,7 +149,7 @@ const char* uart_frame_parser_jsonify_frame_data(void* buffer,
 
     const char* result = cJSON_Print(data);
 
-    cJSON_free(data);
+    cJSON_Delete(data);
 
     return result;
 }

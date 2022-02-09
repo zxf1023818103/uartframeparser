@@ -2,7 +2,7 @@
 #include "uartframeparser.h"
 #include <string>
 #include <stdarg.h>
-#include <cjson/cJSON.h>
+#include <cJSON.h>
 
 extern "C" {
 
@@ -156,7 +156,7 @@ void on_data(void* buffer, struct uart_frame_definition* frame_definition, uint3
 
     GTEST_LOG_(INFO) << result;
 
-    cJSON_free(data);
+    cJSON_Delete(data);
 }
 
 void on_data1(void* buffer, struct uart_frame_definition* frame_definition, uint32_t frame_bytes, struct uart_frame_field_info* field_info_head,
@@ -170,7 +170,7 @@ void on_data1(void* buffer, struct uart_frame_definition* frame_definition, uint
 
     GTEST_LOG_(INFO) << json;
 
-    free((void*)json);
+    cJSON_free((void*)json);
 
     uart_frame_parser_field_data_release(field_data_head);
 }
