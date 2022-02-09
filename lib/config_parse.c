@@ -777,7 +777,9 @@ struct uart_frame_parser *uart_frame_parser_create(const char *json_config, uint
     const char *json_config_end = json_config + json_config_size;
     cJSON *cjson = cJSON_ParseWithOpts(json_config, &json_config_end, 0);
     if (cjson) {
-        return parse_json_config(cjson, on_error, on_data, user_ptr);
+        struct uart_frame_parser* parser = parse_json_config(cjson, on_error, on_data, user_ptr);
+        cJSON_free(cjson);
+        return parser;
     } else {
         on_error(user_ptr, UART_FRAME_PARSER_ERROR_CJSON, __FILE__, __LINE__, cJSON_GetErrorPtr());
         return NULL;
