@@ -694,10 +694,10 @@ parse_definitions_node(cJSON *definitions_node, struct uart_frame_parser_express
     return NULL;
 }
 
-static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_parser_error_callback_t on_error,
+static struct uart_frame_parser *parse_json_config(cJSON *config_root, uart_frame_parser_error_callback_t on_error,
                                                    uart_frame_parser_data_callback_t on_data, void* user_ptr) {
-    if (cJSON_IsObject(config)) {
-        config = config->child;
+    if (cJSON_IsObject(config_root)) {
+        cJSON* config = config_root->child;
 
         cJSON *definitions_node = NULL;
         cJSON *detected_frames_node = NULL;
@@ -734,7 +734,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
                     if (frame_definition_head) {
                         struct uart_frame_parser *parser = calloc(1, sizeof(struct uart_frame_parser));
                         if (parser) {
-                            parser->config = config;
+                            parser->config = config_root;
                             parser->detected_frame_head = detected_frame_head;
                             parser->frame_definition_head = frame_definition_head;
                             parser->on_error = on_error;
