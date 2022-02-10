@@ -59,13 +59,13 @@ add_library(${LIBUARTFRAMEPARSER_NAME} STATIC $<TARGET_OBJECTS:${LIBUARTFRAMEPAR
 
 if (MSVC)
     set(ENABLE_TESTING ON)
-    target_compile_definitions(${LIBUARTFRAMEPARSER_NAME}core PUBLIC _CRT_SECURE_NO_WARNINGS)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
 if (ENABLE_TESTING)
     FetchContent_MakeAvailable(googletest)
     include_directories(${googletest_SOURCE_DIR}/googletest/include)
-    add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/test.cpp" $<TARGET_OBJECTS:${LIBUARTFRAMEPARSER_NAME}core> $<TARGET_OBJECTS:lua> $<TARGET_OBJECTS:gtest>)
+    add_executable(${UARTFRAMEPARSER_TEST_NAME} "test/test.cpp" $<TARGET_OBJECTS:${LIBUARTFRAMEPARSER_NAME}core> $<TARGET_OBJECTS:cjson> $<TARGET_OBJECTS:lua> $<TARGET_OBJECTS:gtest>)
     enable_testing()
     add_test(NAME ${UARTFRAMEPARSER_TEST_NAME} COMMAND ${UARTFRAMEPARSER_TEST_NAME})
 endif()

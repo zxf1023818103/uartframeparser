@@ -347,6 +347,12 @@ typedef void (*uart_frame_parser_data_callback_t)(void *buffer, struct uart_fram
 /// 帧解析器信息
 /// </summary>
 struct uart_frame_parser {
+
+    /// <summary>
+    /// 配置的 cJSON 根节点
+    /// </summary>
+    void *config;
+
     /// <summary>
     /// 数据缓冲区
     /// </summary>
