@@ -765,8 +765,8 @@ static struct uart_frame_parser *parse_json_config(cJSON *config_root, uart_fram
             }
         }
     } else {
-        on_error(user_ptr, UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "config is not an object: %s",
-                 cJSON_Print(config));
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "config_root is not an object: %s",
+                 cJSON_Print(config_root));
     }
 
     return NULL;
