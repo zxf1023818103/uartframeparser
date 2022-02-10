@@ -734,6 +734,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
                     if (frame_definition_head) {
                         struct uart_frame_parser *parser = calloc(1, sizeof(struct uart_frame_parser));
                         if (parser) {
+                            parser->config = config;
                             parser->detected_frame_head = detected_frame_head;
                             parser->frame_definition_head = frame_definition_head;
                             parser->on_error = on_error;
@@ -777,9 +778,7 @@ struct uart_frame_parser *uart_frame_parser_create(const char *json_config, uint
     const char *json_config_end = json_config + json_config_size;
     cJSON *cjson = cJSON_ParseWithOpts(json_config, &json_config_end, 0);
     if (cjson) {
-        struct uart_frame_parser* parser = parse_json_config(cjson, on_error, on_data, user_ptr);
-        cJSON_Delete(cjson);
-        return parser;
+        return parse_json_config(cjson, on_error, on_data, user_ptr);
     } else {
         on_error(user_ptr, UART_FRAME_PARSER_ERROR_CJSON, __FILE__, __LINE__, cJSON_GetErrorPtr());
         return NULL;
@@ -791,5 +790,6 @@ void uart_frame_parser_release(struct uart_frame_parser *parser) {
     uart_frame_parser_expression_engine_release(parser->expression_engine);
     uart_frame_detected_frame_release(parser->detected_frame_head);
     uart_frame_definition_release(parser->frame_definition_head);
+    cJSON_Delete(parser->config);
     free(parser);
 }
