@@ -541,18 +541,23 @@ uart_frame_parser_expression_get_result(struct uart_frame_parser_expression *exp
 /// <param name="concerned_field_definitions">要读取的帧字段的帧定义指针数组，最后一个元素需要为 NULL，传入 NULL 读取所有字段</param>
 /// <param name="on_error">错误回调函数</param>
 /// <returns>返回帧数据列表</returns>
-struct uart_frame_field_data* uart_frame_parser_read_concerned_fields(void* buffer,
-
-    struct uart_frame_field_info* field_info_head,
-
-    struct uart_frame_field_definition** concerned_field_definitions,
-    uart_frame_parser_error_callback_t on_error, void* user_ptr);
+struct uart_frame_field_data*
+uart_frame_parser_read_concerned_fields(void* buffer,
+                                        struct uart_frame_field_info* field_info_head,
+                                        struct uart_frame_field_definition** concerned_field_definitions,
+                                        uart_frame_parser_error_callback_t on_error, void* user_ptr);
 
 /// <summary>
 /// 释放帧数据
 /// </summary>
 /// <param name="field_data_head">要释放的帧数据列表</param>
 void uart_frame_parser_field_data_release(struct uart_frame_field_data* field_data_head);
+
+/// <summary>
+/// 释放帧字段信息
+/// </summary>
+/// <param name="field_info_head">要释放的帧字段信息列表</param>
+void uart_frame_parser_field_info_release(struct uart_frame_field_info *field_info_head);
 
 /// <summary>
 /// 计算帧字段解码表达式
