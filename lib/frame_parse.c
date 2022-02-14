@@ -14,6 +14,7 @@ static int next_frame(struct uart_frame_definition *frame_definition_head,
 void uart_frame_parser_field_info_release(struct uart_frame_field_info *field_info_head) {
     while (field_info_head) {
         struct uart_frame_field_info *next = field_info_head->next;
+        uart_frame_parser_field_info_release(subframe_field_info);
         free(field_info_head);
         field_info_head = next;
     }
