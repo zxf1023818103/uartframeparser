@@ -1,14 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
-project("uartframeparser")
-
 include(FetchContent)
 FetchContent_Declare(vcpkg
     vcpkg
     URL "https://github.com/microsoft/vcpkg/archive/master.zip")
 FetchContent_MakeAvailable(vcpkg)
-set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake
-  CACHE STRING "Vcpkg toolchain file")
+set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake)
+
+project("uartframeparser")
 
 # 禁用 MSVC 的使用不安全 C 语言标准库函数时弹出的警告
 if (MSVC)
