@@ -4,7 +4,10 @@
 #include <QMainWindow>
 #include <QStandardItemModel>
 #include <QRegularExpressionValidator>
+#include <QJsonObject>
+#include <QMap>
 #include "settingsdialog.h"
+#include "framedefinitiondialog.h"
 #include "uartframeparserwrapper.h"
 
 QT_BEGIN_NAMESPACE
@@ -32,6 +35,10 @@ private slots:
 
     void onSerialPortReadyRead();
 
+    void onFrameDefinitionChanged(int row, const QJsonObject &frameDefinitionObject);
+
+    void onFrameDefinitionViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection);
+
     void on_actionExit_triggered();
 
     void on_actionSettings_triggered();
@@ -44,10 +51,31 @@ private slots:
 
     void on_insertByteButton_clicked();
 
+    void on_addFrameDefinitionButton_clicked();
+
+    void on_deleteFrameDefinitionButton_clicked();
+
+    void on_editFrameDefinitionButton_clicked();
+
+    void on_frameDefinitionsView_activated(const QModelIndex &index);
+
+    void on_frameDefinitionsView_doubleClicked(const QModelIndex &index);
+
+    void on_frameDefinitionsView_entered(const QModelIndex &index);
+
+    void on_actionSave_triggered();
+
+signals:
+    void frameDefinitionClicked(int row, const QJsonObject &frameDefinitionObject);
+
+    void framesChanged(const QStringList &frameNames);
+
 private:
     Ui::MainWindow *ui;
 
     SettingsDialog *m_settingsDialog;
+
+    FrameDefinitionDialog *m_frameDefinitionDialog;
 
     UartFrameParserWrapper *m_frameParser;
 
@@ -59,6 +87,10 @@ private:
 
     QStandardItemModel *m_sendingDataViewModel;
 
+    QStandardItemModel *m_frameDefinitionsViewModel;
+
     QRegularExpressionValidator *m_validator;
+
+    QFileDialog *m_fileDialog;
 };
 #endif // MAINWINDOW_H

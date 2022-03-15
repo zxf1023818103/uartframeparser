@@ -1,12 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
-project("uartframeparser")
-
 include(FetchContent)
 FetchContent_Declare(vcpkg
     vcpkg
     URL "https://github.com/microsoft/vcpkg/archive/master.zip")
 FetchContent_MakeAvailable(vcpkg)
+
+project("uartframeparser")
+
 set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake
   CACHE STRING "Vcpkg toolchain file")
 
@@ -63,6 +64,18 @@ set(PROJECT_SOURCES
         src/settingsdialog.cpp
         src/settingsdialog.h
         src/settingsdialog.ui
+        src/framedefinitiondialog.cpp
+        src/framedefinitiondialog.h
+        src/framedefinitiondialog.ui
+        src/fielddefinitiondialog.cpp
+        src/fielddefinitiondialog.h
+        src/fielddefinitiondialog.ui
+        src/bitfielddefinitiondialog.cpp
+        src/bitfielddefinitiondialog.h
+        src/bitfielddefinitiondialog.ui
+        src/subframedialog.cpp
+        src/subframedialog.h
+        src/subframedialog.ui
         src/logtextedit.cpp
         src/logtextedit.h
         src/uartframeparserwrapper.cpp

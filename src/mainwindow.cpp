@@ -28,11 +28,18 @@ MainWindow::MainWindow(QWidget *parent)
     m_sendingDataViewModel->setHorizontalHeaderLabels({ tr("Byte") });
     ui->sendingDataView->setModel(m_sendingDataViewModel);
 
+    m_frameDefinitionsViewModel = new QStandardItemModel(ui->frameDefinitionsView);
+    m_frameDefinitionsViewModel->setHorizontalHeaderLabels({ tr("Name"), tr("Description") });
+    ui->frameDefinitionsView->setModel(m_frameDefinitionsViewModel);    
+
     m_settingsDialog = new SettingsDialog(this);
+    m_frameDefinitionDialog = new FrameDefinitionDialog(this);
+
     m_frameParser = new UartFrameParserWrapper(this);
 
-
     m_validator = new QRegularExpressionValidator(QRegularExpression(R"_([0-9a-fA-F]{2})_"), this);
+
+    m_fileDialog = new QFileDialog(this);
 
     connect(m_settingsDialog, SIGNAL(settingsSaved(QSerialPort*, QString)), this, SLOT(onSettingsSaved(QSerialPort*, QString)));
     connect(m_frameParser, SIGNAL(errorOccurred(QString, QString, int, QString)), m_settingsDialog, SLOT(appendLog(QString, QString, int, QString)));
@@ -40,6 +47,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_sendingDataViewModel, SIGNAL(itemChanged(QStandardItem*)), this, SLOT(onSendingDataItemChanged(QStandardItem*)));
     connect(ui->historyView, SIGNAL(activated(QModelIndex)), this, SLOT(onHistoryListViewActivated(QModelIndex)));
     connect(ui->frameStructureView, SIGNAL(activated(QModelIndex)), this, SLOT(onFrameStructureViewActivated(QModelIndex)));
+    connect(this, SIGNAL(frameDefinitionClicked(int,QJsonObject)), m_frameDefinitionDialog, SLOT(onFrameDefinitionClicked(int,QJsonObject)));
+    connect(m_frameDefinitionDialog, SIGNAL(frameDefinitionChanged(int,QJsonObject)), this, SLOT(onFrameDefinitionChanged(int,QJsonObject)));
+    connect(ui->frameDefinitionsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onFrameDefinitionViewSelectionChanged(QItemSelection,QItemSelection)));
 }
 
 MainWindow::~MainWindow()
@@ -191,6 +201,39 @@ void MainWindow::onSerialPortReadyRead()
     m_frameParser->feedData(m_settingsDialog->serialPort()->readAll());
 }
 
+void MainWindow::onFrameDefinitionChanged(int row, const QJsonObject &frameDefinitionObject)
+{
+    if (row < 0) {
+        QStandardItem *nameModel = new QStandardItem(frameDefinitionObject["name"].toString());
+        nameModel->setData(frameDefinitionObject);
+        QStandardItem *descriptionModel = new QStandardItem(frameDefinitionObject["description"].toString());
+
+        m_frameDefinitionsViewModel->appendRow({ nameModel, descriptionModel });
+    }
+    else {
+        QStandardItem *nameModel = m_frameDefinitionsViewModel->item(row, 0);
+        QStandardItem *descriptionModel = m_frameDefinitionsViewModel->item(row, 1);
+
+        nameModel->setData(frameDefinitionObject);
+        nameModel->setText(frameDefinitionObject["name"].toString());
+        descriptionModel->setText(frameDefinitionObject["description"].toString());
+    }
+
+    QStringList frameNames;
+    for (int i = 0; i < m_frameDefinitionsViewModel->rowCount(); i++) {
+        const QString &name = m_frameDefinitionsViewModel->item(i)->text();
+        frameNames.push_back(name);
+    }
+    emit framesChanged(frameNames);
+}
+
+void MainWindow::onFrameDefinitionViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection)
+{
+    bool enabled = ui->frameDefinitionsView->selectionModel()->hasSelection();
+    ui->editFrameDefinitionButton->setEnabled(enabled);
+    ui->deleteFrameDefinitionButton->setEnabled(enabled);
+}
+
 void MainWindow::on_actionExit_triggered()
 {
     QApplication::quit();
@@ -198,8 +241,7 @@ void MainWindow::on_actionExit_triggered()
 
 void MainWindow::on_actionSettings_triggered()
 {
-    m_settingsDialog->hide();
-    m_settingsDialog->show();
+    m_settingsDialog->exec();
 }
 
 void MainWindow::on_addByteButton_clicked()
@@ -244,3 +286,46 @@ void MainWindow::on_insertByteButton_clicked()
         on_addByteButton_clicked();
     }
 }
+
+void MainWindow::on_addFrameDefinitionButton_clicked()
+{
+    emit frameDefinitionClicked(-1, QJsonObject());
+}
+
+void MainWindow::on_deleteFrameDefinitionButton_clicked()
+{
+    const QItemSelection& selection = ui->frameDefinitionsView->selectionModel()->selection();
+    for (auto i = selection.begin(); i != selection.end(); i++) {
+        m_frameDefinitionsViewModel->removeRows(i->top(), i->height(), i->parent());
+    }
+}
+
+void MainWindow::on_editFrameDefinitionButton_clicked()
+{
+    on_frameDefinitionsView_entered(ui->frameDefinitionsView->currentIndex());
+}
+
+void MainWindow::on_frameDefinitionsView_activated(const QModelIndex &index)
+{
+    ui->editFrameDefinitionButton->setEnabled(true);
+    ui->deleteFrameDefinitionButton->setEnabled(true);
+}
+
+
+void MainWindow::on_frameDefinitionsView_doubleClicked(const QModelIndex &index)
+{
+    on_frameDefinitionsView_entered(index);
+}
+
+
+void MainWindow::on_frameDefinitionsView_entered(const QModelIndex &index)
+{
+    emit frameDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
+}
+
+
+void MainWindow::on_actionSave_triggered()
+{
+
+}
+

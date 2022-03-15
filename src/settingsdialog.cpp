@@ -42,8 +42,8 @@ void SettingsDialog::appendLog(const QString &topic, const QString &filename, in
     }
 
     ui->logsTextEdit->appendMessage(QString("[%1][%2:%3] %4").arg(tr(topic.toLatin1()), filename.mid(index), QVariant(line).toString(), tr(message.toLatin1())));
-    hide();
-    show();
+
+    exec();
 }
 
 void SettingsDialog::refreshSerialPortList()
@@ -83,8 +83,7 @@ void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
 
 void SettingsDialog::on_schemaFileOpenButton_clicked()
 {
-    m_fileDialog->hide();
-    m_fileDialog->show();
+    m_fileDialog->exec();
 }
 
 void SettingsDialog::on_buttonBox_accepted()
