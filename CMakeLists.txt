@@ -5,11 +5,17 @@ FetchContent_Declare(vcpkg
     vcpkg
     URL "https://github.com/microsoft/vcpkg/archive/master.zip")
 FetchContent_MakeAvailable(vcpkg)
+<<<<<<< HEAD
 
 project("uartframeparser")
 
 set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake
   CACHE STRING "Vcpkg toolchain file")
+=======
+set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake)
+
+project("uartframeparser")
+>>>>>>> 4b5e2a9c2724c29e89ddd5e8aba4a21d4e5116f9
 
 # 禁用 MSVC 的使用不安全 C 语言标准库函数时弹出的警告
 if (MSVC)
