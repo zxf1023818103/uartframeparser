@@ -39,9 +39,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_validator = new QRegularExpressionValidator(QRegularExpression(R"_([0-9a-fA-F]{2})_"), this);
 
-    m_fileDialog = new QFileDialog(this);
+    m_saveChangesDialog = new SaveChangesDialog(this);
 
     connect(m_settingsDialog, SIGNAL(settingsSaved(QSerialPort*, QString)), this, SLOT(onSettingsSaved(QSerialPort*, QString)));
+    connect(m_settingsDialog, SIGNAL(schemaFileSelected(QString)), this, SLOT(onSchemaFileSelected(QString)));
     connect(m_frameParser, SIGNAL(errorOccurred(QString, QString, int, QString)), m_settingsDialog, SLOT(appendLog(QString, QString, int, QString)));
     connect(m_frameParser, SIGNAL(frameReceived(QJsonDocument)), this, SLOT(onFrameReceived(QJsonDocument)));
     connect(m_sendingDataViewModel, SIGNAL(itemChanged(QStandardItem*)), this, SLOT(onSendingDataItemChanged(QStandardItem*)));
@@ -49,7 +50,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->frameStructureView, SIGNAL(activated(QModelIndex)), this, SLOT(onFrameStructureViewActivated(QModelIndex)));
     connect(this, SIGNAL(frameDefinitionClicked(int,QJsonObject)), m_frameDefinitionDialog, SLOT(onFrameDefinitionClicked(int,QJsonObject)));
     connect(m_frameDefinitionDialog, SIGNAL(frameDefinitionChanged(int,QJsonObject)), this, SLOT(onFrameDefinitionChanged(int,QJsonObject)));
+    connect(m_frameDefinitionsViewModel, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(onFrameDefinitionsChanged(QModelIndex,int,int)));
+    connect(m_frameDefinitionsViewModel, SIGNAL(rowsRemoved(QModelIndex,int,int)), this, SLOT(onFrameDefinitionsChanged(QModelIndex,int,int)));
     connect(ui->frameDefinitionsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onFrameDefinitionViewSelectionChanged(QItemSelection,QItemSelection)));
+
+    refreshButtonBoxStatus();
 }
 
 MainWindow::~MainWindow()
@@ -57,10 +62,29 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::close()
+{
+    if (changed && ui->actionSave->isEnabled()) {
+        bool needSaving = m_saveChangesDialog->askForSaving();
+        if (needSaving) {
+            if (!saveChanges()) {
+                return;
+            }
+        }
+    }
+    QMainWindow::close();
+    QApplication::exit();
+}
+
 void MainWindow::onSettingsSaved(QSerialPort *serialPort, const QString& schema)
 {
     connect(serialPort, SIGNAL(readyRead()), this, SLOT(onSerialPortReadyRead()), Qt::UniqueConnection);
     m_frameParser->loadJsonSchema(schema);
+}
+
+void MainWindow::onSchemaFileSelected(const QString &schemaFilePath)
+{
+    loadSchemaFile(); // TODO
 }
 
 void MainWindow::onFrameReceived(const QJsonDocument &frameData)
@@ -224,6 +248,9 @@ void MainWindow::onFrameDefinitionChanged(int row, const QJsonObject &frameDefin
         const QString &name = m_frameDefinitionsViewModel->item(i)->text();
         frameNames.push_back(name);
     }
+
+    changed = true;
+
     emit framesChanged(frameNames);
 }
 
@@ -234,9 +261,15 @@ void MainWindow::onFrameDefinitionViewSelectionChanged(const QItemSelection &sel
     ui->deleteFrameDefinitionButton->setEnabled(enabled);
 }
 
+void MainWindow::onFrameDefinitionsChanged(const QModelIndex &parent, int first, int last)
+{
+    refreshButtonBoxStatus();
+    changed = true;
+}
+
 void MainWindow::on_actionExit_triggered()
 {
-    QApplication::quit();
+    close();
 }
 
 void MainWindow::on_actionSettings_triggered()
@@ -294,10 +327,10 @@ void MainWindow::on_addFrameDefinitionButton_clicked()
 
 void MainWindow::on_deleteFrameDefinitionButton_clicked()
 {
-    const QItemSelection& selection = ui->frameDefinitionsView->selectionModel()->selection();
-    for (auto i = selection.begin(); i != selection.end(); i++) {
-        m_frameDefinitionsViewModel->removeRows(i->top(), i->height(), i->parent());
-    }
+    const QItemSelectionModel *model = ui->frameDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    m_frameDefinitionsViewModel->removeRow(index.row());
+    ui->frameDefinitionsView->setFocus();
 }
 
 void MainWindow::on_editFrameDefinitionButton_clicked()
@@ -326,6 +359,128 @@ void MainWindow::on_frameDefinitionsView_entered(const QModelIndex &index)
 
 void MainWindow::on_actionSave_triggered()
 {
+    saveChanges();
+}
 
+void MainWindow::refreshButtonBoxStatus()
+{
+    ui->actionSave->setDisabled(m_frameDefinitionsViewModel->rowCount() == 0);
+}
+
+void MainWindow::discardChanges()
+{
+    m_frameDefinitionsViewModel->removeRows(0, m_frameDefinitionsViewModel->rowCount());
+    ui->initScriptPlainTextEdit->clear();
+    changed = false;
+}
+
+bool MainWindow::saveChanges()
+{
+    if (m_settingsDialog->schemaFilePath().trimmed().isEmpty()) {
+        m_settingsDialog->selectFile();
+    }
+
+    if (m_settingsDialog->schemaFilePath().trimmed().isEmpty()) {
+        QFile *schemaFile = new QFile(m_settingsDialog->schemaFilePath());
+
+        QJsonObject *schema = new QJsonObject();
+        schema->insert("init", ui->initScriptPlainTextEdit->toPlainText());
+
+        QJsonArray *frameDefinitions = new QJsonArray();
+        for (int i = 0; i < m_frameDefinitionsViewModel->rowCount(); i++) {
+            frameDefinitions->append(m_frameDefinitionsViewModel->item(i)->data().toJsonObject());
+        }
+        schema->insert("definitions", *frameDefinitions);
+
+        QJsonDocument *document = new QJsonDocument(*schema);
+
+        const QByteArray& json = document->toJson();
+        qDebug() << json;
+
+        if (schemaFile->open(QFile::ReadWrite)) {
+            schemaFile->write(json);
+            schemaFile->close();
+            changed = false;
+
+            delete schema;
+            delete frameDefinitions;
+            delete document;
+            delete schemaFile;
+
+            return true;
+        }
+        else {
+            m_settingsDialog->appendLog("Settings", __FILE__, __LINE__, schemaFile->errorString());
+        }
+
+        delete schema;
+        delete frameDefinitions;
+        delete document;
+        delete schemaFile;
+    }
+
+    return false;
+}
+
+void MainWindow::loadSchemaFile()
+{
+    const QString &filename = m_settingsDialog->schemaFilePath();
+    if (filename.size()) {
+        QFile file(filename);
+        if (file.open(QFile::ReadOnly | QFile::Text)) {
+            const QByteArray& content = file.readAll();
+            if (content.size()) {
+                const QJsonObject &config = QJsonDocument::fromJson(content).object();
+
+                ui->initScriptPlainTextEdit->setPlainText(config["init"].toString());
+
+                const QJsonArray &frameDefinitionsArray = config["definitions"].toArray();
+                for (auto i = frameDefinitionsArray.constBegin(); i != frameDefinitionsArray.constEnd(); i++) {
+                    onFrameDefinitionChanged(-1, i->toObject());
+                }
+
+                const QJsonArray &framesToBeDetectedArray = config["frames"].toArray();
+                for (auto i = framesToBeDetectedArray.constBegin(); i != framesToBeDetectedArray.constEnd(); i++) {
+
+                }
+            }
+            else {
+                m_settingsDialog->appendLog("Settings", __FILE__, __LINE__, "Schema file is empty");
+            }
+        }
+        else {
+            m_settingsDialog->appendLog("Settings", __FILE__, __LINE__, file.errorString());
+        }
+    }
+    else {
+        m_settingsDialog->appendLog("Settings", __FILE__, __LINE__, "Schema filename is empty");
+    }
+}
+
+
+void MainWindow::on_initScriptPlainTextEdit_textChanged()
+{
+    changed = true;
+}
+
+
+void MainWindow::on_actionNew_triggered()
+{
+    if (changed && ui->actionSave->isEnabled()) {
+        if (m_saveChangesDialog->askForSaving()) {
+            if (saveChanges()) {
+                discardChanges();
+            }
+        }
+    }
+    else {
+        discardChanges();
+    }
+}
+
+
+void MainWindow::on_actionOpen_triggered()
+{
+    m_settingsDialog->selectFile();
 }
 

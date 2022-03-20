@@ -34,6 +34,36 @@ public slots:
     void onFieldDefinitionClicked(int row, const QJsonObject& fieldDefinitionObject);
 
 private slots:
+    void on_bitfieldDefinitionsView_entered(const QModelIndex &index);
+
+private slots:
+    void on_bitfieldDefinitionsView_doubleClicked(const QModelIndex &index);
+
+private slots:
+    void on_moveDownSubframeButton_clicked();
+
+private slots:
+    void on_moveUpSubframeButton_clicked();
+
+private slots:
+    void on_editSubframeButton_clicked();
+
+private slots:
+    void on_deleteSubframeButton_clicked();
+
+private slots:
+    void on_moveDownBitfieldButton_clicked();
+
+private slots:
+    void on_moveUpBitfieldButton_clicked();
+
+private slots:
+    void on_editBitfieldButton_clicked();
+
+private slots:
+    void on_deleteBitfieldButton_clicked();
+
+private slots:
     void onBitfieldDefinitionViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection);
 
     void onSubframesViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection);
@@ -42,9 +72,9 @@ private slots:
 
     void onSubframeChanged(int row, const QString &subframe);
 
-    void onSubframesChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
+    void onSubframesChanged(const QModelIndex &parent, int first, int last);
 
-    void onBitfieldsChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
+    void onBitfieldsChanged(const QModelIndex &parent, int first, int last);
 
     void on_commonFieldTypeRadioButton_clicked();
 

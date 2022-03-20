@@ -10,14 +10,16 @@ FieldDefinitionDialog::FieldDefinitionDialog(QWidget *parent) :
     m_subframesViewModel = new QStandardItemModel(ui->subframesView);
     m_subframesViewModel->setHorizontalHeaderLabels({ tr("Name") });
     ui->subframesView->setModel(m_subframesViewModel);
-    connect(m_subframesViewModel, SIGNAL(dataChanged(QModelIndex,QModelIndex,QList<int>)), this, SLOT(onSubframesChanged(QModelIndex,QModelIndex,QList<int>)));
     connect(ui->subframesView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onSubframesViewSelectionChanged(QItemSelection,QItemSelection)));
+    connect(m_subframesViewModel, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(onSubframesChanged(QModelIndex,int,int)));
+    connect(m_subframesViewModel, SIGNAL(rowsRemoved(QModelIndex,int,int)), this, SLOT(onSubframesChanged(QModelIndex,int,int)));
 
     m_bitfieldDefinitionsViewModel = new QStandardItemModel(ui->bitfieldDefinitionsView);
     m_bitfieldDefinitionsViewModel->setHorizontalHeaderLabels({ tr("Name"), tr("Description"), tr("Bits") });
     ui->bitfieldDefinitionsView->setModel(m_bitfieldDefinitionsViewModel);
-    connect(m_bitfieldDefinitionsViewModel, SIGNAL(dataChanged(QModelIndex,QModelIndex,QList<int>)), this, SLOT(onBitfieldsChanged(QModelIndex,QModelIndex,QList<int>)));
     connect(ui->bitfieldDefinitionsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onBitfieldDefinitionViewSelectionChanged(QItemSelection,QItemSelection)));
+    connect(m_bitfieldDefinitionsViewModel, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(onBitfieldsChanged(QModelIndex,int,int)));
+    connect(m_bitfieldDefinitionsViewModel, SIGNAL(rowsRemoved(QModelIndex,int,int)), this, SLOT(onBitfieldsChanged(QModelIndex,int,int)));
 
     m_bitfieldDefinitionDialog = new BitfieldDefinitionDialog(this);
     connect(this, SIGNAL(bitfieldDefinitionClicked(int,QJsonObject)), m_bitfieldDefinitionDialog, SLOT(onBitfieldDefinitionClicked(int,QJsonObject)));
@@ -70,6 +72,9 @@ void FieldDefinitionDialog::onFieldDefinitionClicked(int row, const QJsonObject 
         }
     }
 
+    refreshToolButtonStatus();
+    refreshButtonBoxStatus();
+
     exec();
 }
 
@@ -80,15 +85,18 @@ void FieldDefinitionDialog::onBitfieldDefinitionViewSelectionChanged(const QItem
 
 void FieldDefinitionDialog::onSubframesViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection)
 {
+    refreshButtonBoxStatus();
     refreshToolButtonStatus();
 }
 
 void FieldDefinitionDialog::onBitfieldDefinitionChanged(int row, const QJsonObject &bitfieldDefinitionObject)
 {
-    QStandardItem *nameItem = new QStandardItem(bitfieldDefinitionObject["name"].toString());
-    QStandardItem *descriptionItem = new QStandardItem(bitfieldDefinitionObject["description"].toString());
-    QStandardItem *bitsItem = new QStandardItem(bitfieldDefinitionObject["bits"].toString());
     if (row < 0) {
+        QStandardItem *nameItem = new QStandardItem(bitfieldDefinitionObject["name"].toString());
+        nameItem->setData(bitfieldDefinitionObject);
+        QStandardItem *descriptionItem = new QStandardItem(bitfieldDefinitionObject["description"].toString());
+        const QJsonValue &bitsValue = bitfieldDefinitionObject["bits"];
+        QStandardItem *bitsItem = new QStandardItem(bitsValue.isString() ? bitsValue.toString() : QString("%1").arg(bitsValue.toInt()));
         m_bitfieldDefinitionsViewModel->appendRow({ nameItem, descriptionItem, bitsItem });
     }
     else {
@@ -96,7 +104,8 @@ void FieldDefinitionDialog::onBitfieldDefinitionChanged(int row, const QJsonObje
         nameItem->setData(bitfieldDefinitionObject);
         nameItem->setText(bitfieldDefinitionObject["name"].toString());
         m_bitfieldDefinitionsViewModel->item(row, 1)->setText(bitfieldDefinitionObject["description"].toString());
-        m_bitfieldDefinitionsViewModel->item(row, 2)->setText(QString("%1").arg(bitfieldDefinitionObject["bits"].toInt()));
+        const QJsonValue &bitsValue = bitfieldDefinitionObject["bits"];
+        m_bitfieldDefinitionsViewModel->item(row, 2)->setText(bitsValue.isString() ? bitsValue.toString() : QString("%1").arg(bitsValue.toInt()));
     }
 }
 
@@ -110,31 +119,39 @@ void FieldDefinitionDialog::onSubframeChanged(int row, const QString &subframe)
     }
 }
 
-void FieldDefinitionDialog::onSubframesChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
+void FieldDefinitionDialog::onSubframesChanged(const QModelIndex &parent, int first, int last)
 {
     refreshButtonBoxStatus();
+    refreshToolButtonStatus();
 }
 
-void FieldDefinitionDialog::onBitfieldsChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
+void FieldDefinitionDialog::onBitfieldsChanged(const QModelIndex &parent, int first, int last)
 {
     refreshButtonBoxStatus();
+    refreshToolButtonStatus();
 }
 
 void FieldDefinitionDialog::on_commonFieldTypeRadioButton_clicked()
 {
     ui->stackedWidget->setCurrentWidget(ui->commonFieldTypePage);
+    ui->bytesLabel->setText(tr("Byte*"));
+    refreshButtonBoxStatus();
 }
 
 
 void FieldDefinitionDialog::on_bitfieldsFieldTypeRadioButton_clicked()
 {
     ui->stackedWidget->setCurrentWidget(ui->bitfieldFieldTypePage);
+    ui->bytesLabel->setText(tr("Byte"));
+    refreshButtonBoxStatus();
 }
 
 
 void FieldDefinitionDialog::on_subframesFieldTypeRadioButton_clicked()
 {
     ui->stackedWidget->setCurrentWidget(ui->subframeFieldTypePage);
+    ui->bytesLabel->setText(tr("Byte"));
+    refreshButtonBoxStatus();
 }
 
 
@@ -145,7 +162,8 @@ void FieldDefinitionDialog::displayBitfieldDefinitions(const QJsonArray &bitfiel
         QStandardItem *nameItem = new QStandardItem(i->toObject()["name"].toString());
         nameItem->setData(i->toObject());
         QStandardItem *descriptionItem = new QStandardItem(i->toObject()["description"].toString());
-        QStandardItem *bitsItem = new QStandardItem(QString("%1").arg(i->toObject()["bits"].toInt()));
+        const QJsonValue &bitsValue = i->toObject()["bits"];
+        QStandardItem *bitsItem = new QStandardItem(bitsValue.isString() ? bitsValue.toString() : QString("%1").arg(bitsValue.toInt()));
         m_bitfieldDefinitionsViewModel->appendRow({ nameItem, descriptionItem, bitsItem });
     }
 }
@@ -158,7 +176,8 @@ void FieldDefinitionDialog::displaySubframes(const QJsonArray &subframesArray)
         QStandardItem *nameItem = new QStandardItem(i->toObject()["name"].toString());
         nameItem->setData(i->toObject());
         QStandardItem *descriptionItem = new QStandardItem(i->toObject()["description"].toString());
-        QStandardItem *bitsItem = new QStandardItem(QString("%1").arg(i->toObject()["bits"].toInt()));
+        const QJsonValue &bitsValue = i->toObject()["bits"];
+        QStandardItem *bitsItem = new QStandardItem(bitsValue.isString() ? bitsValue.toString() : QString("%1").arg(bitsValue.toInt()));
         m_bitfieldDefinitionsViewModel->appendRow({ nameItem, descriptionItem, bitsItem });
     }
 }
@@ -173,23 +192,26 @@ void FieldDefinitionDialog::refreshButtonBoxStatus()
         empty = m_subframesViewModel->rowCount() == 0;
     }
     else {
-        empty = false;
+        empty = ui->bytesLineEdit->text().trimmed().isEmpty();
     }
-    ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(empty || ui->nameLineEdit->text().trimmed().isEmpty() || ui->bytesLineEdit->text().trimmed().isEmpty());
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(empty || ui->nameLineEdit->text().trimmed().isEmpty());
 }
 
 void FieldDefinitionDialog::refreshToolButtonStatus()
 {
     if (ui->bitfieldsFieldTypeRadioButton->isChecked()) {
         const QItemSelectionModel *model = ui->bitfieldDefinitionsView->selectionModel();
-        const QItemSelection &selection = model->selection();
+        const QModelIndex &index = model->currentIndex();
 
-        if (model->hasSelection()) {
+        if (index.isValid()) {
             ui->deleteBitfieldButton->setEnabled(true);
             ui->editBitfieldButton->setEnabled(true);
 
-            const QModelIndex &index = selection[0].indexes()[0];
-            if (index.row() == m_bitfieldDefinitionsViewModel->rowCount() - 1) {
+            if (m_bitfieldDefinitionsViewModel->rowCount() == 0) {
+                ui->moveUpBitfieldButton->setEnabled(false);
+                ui->moveDownBitfieldButton->setEnabled(false);
+            }
+            else if (index.row() == m_bitfieldDefinitionsViewModel->rowCount() - 1) {
                 ui->moveUpBitfieldButton->setDisabled(false);
                 ui->moveDownBitfieldButton->setDisabled(true);
             }
@@ -211,14 +233,17 @@ void FieldDefinitionDialog::refreshToolButtonStatus()
     }
     else if (ui->subframesFieldTypeRadioButton->isChecked()) {
         const QItemSelectionModel *model = ui->subframesView->selectionModel();
-        const QItemSelection &selection = model->selection();
+        const QModelIndex &index = model->currentIndex();
 
-        if (model->hasSelection()) {
+        if (index.isValid()) {
             ui->deleteSubframeButton->setEnabled(true);
             ui->editSubframeButton->setEnabled(true);
 
-            const QModelIndex &index = selection[0].indexes()[0];
-            if (index.row() == m_subframesViewModel->rowCount() - 1) {
+            if (m_subframesViewModel->rowCount() == 1) {
+                ui->moveUpSubframeButton->setEnabled(false);
+                ui->moveDownSubframeButton->setEnabled(false);
+            }
+            else if (index.row() == m_subframesViewModel->rowCount() - 1) {
                 ui->moveUpSubframeButton->setDisabled(false);
                 ui->moveDownSubframeButton->setDisabled(true);
             }
@@ -314,5 +339,101 @@ void FieldDefinitionDialog::on_nameLineEdit_textChanged(const QString &arg1)
 void FieldDefinitionDialog::on_bytesLineEdit_textChanged(const QString &arg1)
 {
     refreshButtonBoxStatus();
+}
+
+
+void FieldDefinitionDialog::on_deleteBitfieldButton_clicked()
+{
+    const QItemSelectionModel *model = ui->bitfieldDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    m_bitfieldDefinitionsViewModel->removeRow(index.row());
+    ui->bitfieldDefinitionsView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_editBitfieldButton_clicked()
+{
+    QItemSelectionModel *model = ui->bitfieldDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex().siblingAtColumn(0);
+    ui->bitfieldDefinitionsView->setFocus();
+    emit bitfieldDefinitionClicked(index.row(), index.data(Qt::UserRole + 1).toJsonObject());
+}
+
+
+void FieldDefinitionDialog::on_moveUpBitfieldButton_clicked()
+{
+    const QItemSelectionModel *model = ui->bitfieldDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_bitfieldDefinitionsViewModel->takeRow(row);
+    m_bitfieldDefinitionsViewModel->insertRow(row - 1, rowItems);
+    ui->bitfieldDefinitionsView->setCurrentIndex(m_bitfieldDefinitionsViewModel->index(row - 1, 0));
+    ui->bitfieldDefinitionsView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_moveDownBitfieldButton_clicked()
+{
+    const QItemSelectionModel *model = ui->bitfieldDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_bitfieldDefinitionsViewModel->takeRow(row);
+    m_bitfieldDefinitionsViewModel->insertRow(row + 1, rowItems);
+    ui->bitfieldDefinitionsView->setCurrentIndex(m_bitfieldDefinitionsViewModel->index(row + 1, 0));
+    ui->bitfieldDefinitionsView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_deleteSubframeButton_clicked()
+{
+    const QItemSelectionModel *model = ui->subframesView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    m_subframesViewModel->removeRow(index.row());
+    ui->subframesView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_editSubframeButton_clicked()
+{
+    QItemSelectionModel *model = ui->subframesView->selectionModel();
+    const QModelIndex &index = model->currentIndex().siblingAtColumn(0);
+    ui->subframesView->setFocus();
+    emit subframeClicked(index.row(), index.data(Qt::UserRole + 1).toString());
+}
+
+
+void FieldDefinitionDialog::on_moveUpSubframeButton_clicked()
+{
+    const QItemSelectionModel *model = ui->subframesView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_subframesViewModel->takeRow(row);
+    m_subframesViewModel->insertRow(row - 1, rowItems);
+    ui->subframesView->setCurrentIndex(m_subframesViewModel->index(row - 1, 0));
+    ui->subframesView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_moveDownSubframeButton_clicked()
+{
+    const QItemSelectionModel *model = ui->subframesView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_subframesViewModel->takeRow(row);
+    m_subframesViewModel->insertRow(row + 1, rowItems);
+    ui->subframesView->setCurrentIndex(m_subframesViewModel->index(row + 1, 0));
+    ui->subframesView->setFocus();
+}
+
+
+void FieldDefinitionDialog::on_bitfieldDefinitionsView_doubleClicked(const QModelIndex &index)
+{
+    emit bitfieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
+}
+
+
+void FieldDefinitionDialog::on_bitfieldDefinitionsView_entered(const QModelIndex &index)
+{
+    emit bitfieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
 }
 

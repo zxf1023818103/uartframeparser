@@ -21,11 +21,17 @@ public:
     ~FrameDefinitionDialog();
 
 private slots:
+    void on_fieldDefinitionsView_entered(const QModelIndex &index);
+
+private slots:
+    void on_fieldDefinitionsView_doubleClicked(const QModelIndex &index);
+
+private slots:
     void onFrameDefinitionClicked(int row, const QJsonObject &frameDefinitionObject);
 
     void onFieldDefinitionViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection);
 
-    void onFieldDefinitionsChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
+    void onFieldDefinitionsChanged(const QModelIndex &parent, int first, int last);
 
     void onFieldDefinitionChanged(int row, const QJsonObject &fieldDefnintionObject);
 

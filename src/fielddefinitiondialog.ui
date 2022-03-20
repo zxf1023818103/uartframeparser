@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>427</width>
+    <height>448</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -99,7 +99,7 @@
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="commonFieldTypePage">
       <layout class="QVBoxLayout" name="verticalLayout_5">

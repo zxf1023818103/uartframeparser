@@ -10,13 +10,13 @@ FrameDefinitionDialog::FrameDefinitionDialog(QWidget *parent) :
     m_fieldDefinitionsViewModel = new QStandardItemModel(ui->fieldDefinitionsView);
     m_fieldDefinitionsViewModel->setHorizontalHeaderLabels({ tr("Name"), tr("Description"), tr("Which contains") });
     ui->fieldDefinitionsView->setModel(m_fieldDefinitionsViewModel);
+    connect(ui->fieldDefinitionsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onFieldDefinitionViewSelectionChanged(QItemSelection,QItemSelection)));
+    connect(m_fieldDefinitionsViewModel, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(onFieldDefinitionsChanged(QModelIndex,int,int)));
+    connect(m_fieldDefinitionsViewModel, SIGNAL(rowsRemoved(QModelIndex,int,int)), this, SLOT(onFieldDefinitionsChanged(QModelIndex,int,int)));
 
     m_fieldDefinitionDialog = new FieldDefinitionDialog(this);
     connect(this, SIGNAL(fieldDefinitionClicked(int,QJsonObject)), m_fieldDefinitionDialog, SLOT(onFieldDefinitionClicked(int,QJsonObject)));
     connect(m_fieldDefinitionDialog, SIGNAL(fieldDefinitionChanged(int,QJsonObject)), this, SLOT(onFieldDefinitionChanged(int,QJsonObject)));
-
-    connect(ui->fieldDefinitionsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(onFieldDefinitionViewSelectionChanged(QItemSelection,QItemSelection)));
-    connect(m_fieldDefinitionsViewModel, SIGNAL(dataChanged(QModelIndex,QModelIndex,QList<int>)), this, SLOT(onFieldDefinitionsChanged(QModelIndex,QModelIndex,QList<int>)));
 }
 
 FrameDefinitionDialog::~FrameDefinitionDialog()
@@ -53,9 +53,10 @@ void FrameDefinitionDialog::onFieldDefinitionViewSelectionChanged(const QItemSel
     refreshToolButtonStatus();
 }
 
-void FrameDefinitionDialog::onFieldDefinitionsChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
+void FrameDefinitionDialog::onFieldDefinitionsChanged(const QModelIndex &parent, int first, int last)
 {
     refreshButtonBoxStatus();
+    refreshToolButtonStatus();
 }
 
 void FrameDefinitionDialog::onFieldDefinitionChanged(int row, const QJsonObject &fieldDefinitionObject)
@@ -88,47 +89,43 @@ void FrameDefinitionDialog::on_addFieldButton_clicked()
 
 void FrameDefinitionDialog::on_deleteFieldButton_clicked()
 {
-    const QItemSelection& selection = ui->fieldDefinitionsView->selectionModel()->selection();
-    for (auto i = selection.begin(); i != selection.end(); i++) {
-        m_fieldDefinitionsViewModel->removeRows(i->top(), i->height(), i->parent());
-    }
+    const QItemSelectionModel *model = ui->fieldDefinitionsView->selectionModel();
+    const QModelIndex &index = model->currentIndex();
+    m_fieldDefinitionsViewModel->removeRow(index.row());
+    ui->fieldDefinitionsView->setFocus();
 }
 
 
 void FrameDefinitionDialog::on_editFieldButton_clicked()
 {
     QItemSelectionModel *model = ui->fieldDefinitionsView->selectionModel();
-    const QItemSelection &selection = model->selection();
-    if (model->hasSelection()) {
-        const QModelIndex &index = selection[0].indexes()[0].siblingAtColumn(0);
-        emit fieldDefinitionClicked(index.row(), index.data(Qt::UserRole + 1).toJsonObject());
-    }
+    const QModelIndex &index = model->currentIndex().siblingAtColumn(0);
+    ui->fieldDefinitionsView->setFocus();
+    emit fieldDefinitionClicked(index.row(), index.data(Qt::UserRole + 1).toJsonObject());
 }
 
 
 void FrameDefinitionDialog::on_moveUpFieldButton_clicked()
 {
     const QItemSelectionModel *model = ui->fieldDefinitionsView->selectionModel();
-    const QItemSelection &selection = model->selection();
-    if (ui->fieldDefinitionsView->selectionModel()->hasSelection()) {
-        const QModelIndex &index = selection[0].indexes()[0];
-        if (index.row() != 0) {
-            m_fieldDefinitionsViewModel->moveRow(index.parent(), index.row(), index.parent(), index.row() - 1);
-        }
-    }
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_fieldDefinitionsViewModel->takeRow(row);
+    m_fieldDefinitionsViewModel->insertRow(row - 1, rowItems);
+    ui->fieldDefinitionsView->setCurrentIndex(m_fieldDefinitionsViewModel->index(row - 1, 0));
+    ui->fieldDefinitionsView->setFocus();
 }
 
 
 void FrameDefinitionDialog::on_moveDownFieldButton_clicked()
 {
     const QItemSelectionModel *model = ui->fieldDefinitionsView->selectionModel();
-    const QItemSelection &selection = model->selection();
-    if (ui->fieldDefinitionsView->selectionModel()->hasSelection()) {
-        const QModelIndex &index = selection[0].indexes()[0];
-        if (index.row() != m_fieldDefinitionsViewModel->rowCount() - 1) {
-            m_fieldDefinitionsViewModel->moveRow(index.parent(), index.row(), index.parent(), index.row() + 1);
-        }
-    }
+    const QModelIndex &index = model->currentIndex();
+    int row = index.row();
+    QList<QStandardItem*> rowItems = m_fieldDefinitionsViewModel->takeRow(row);
+    m_fieldDefinitionsViewModel->insertRow(row + 1, rowItems);
+    ui->fieldDefinitionsView->setCurrentIndex(m_fieldDefinitionsViewModel->index(row + 1, 0));
+    ui->fieldDefinitionsView->setFocus();
 }
 
 
@@ -144,6 +141,7 @@ void FrameDefinitionDialog::on_buttonBox_accepted()
     frameDefinitionObject["validator"] = ui->validatorLineEdit->text();
     frameDefinitionObject["fields"] = fieldDefinitions;
     emit frameDefinitionChanged(m_row, frameDefinitionObject);
+    close();
 }
 
 
@@ -169,14 +167,17 @@ void FrameDefinitionDialog::refreshButtonBoxStatus()
 void FrameDefinitionDialog::refreshToolButtonStatus()
 {
     const QItemSelectionModel *model = ui->fieldDefinitionsView->selectionModel();
-    const QItemSelection &selection = model->selection();
+    const QModelIndex &index = model->currentIndex();
 
-    if (model->hasSelection()) {
+    if (index.isValid()) {
         ui->deleteFieldButton->setEnabled(true);
         ui->editFieldButton->setEnabled(true);
 
-        const QModelIndex &index = selection[0].indexes()[0];
-        if (index.row() == m_fieldDefinitionsViewModel->rowCount() - 1) {
+        if (m_fieldDefinitionsViewModel->rowCount() == 1) {
+            ui->moveUpFieldButton->setEnabled(false);
+            ui->moveDownFieldButton->setEnabled(false);
+        }
+        else if (index.row() == m_fieldDefinitionsViewModel->rowCount() - 1) {
             ui->moveUpFieldButton->setDisabled(false);
             ui->moveDownFieldButton->setDisabled(true);
         }
@@ -202,3 +203,13 @@ void FrameDefinitionDialog::on_nameLineEdit_textChanged(const QString &arg1)
     refreshButtonBoxStatus();
 }
 
+
+void FrameDefinitionDialog::on_fieldDefinitionsView_doubleClicked(const QModelIndex &index)
+{
+    emit fieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
+}
+
+void FrameDefinitionDialog::on_fieldDefinitionsView_entered(const QModelIndex &index)
+{
+    emit fieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
+}

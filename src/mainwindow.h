@@ -6,6 +6,7 @@
 #include <QRegularExpressionValidator>
 #include <QJsonObject>
 #include <QMap>
+#include "savechangesdialog.h"
 #include "settingsdialog.h"
 #include "framedefinitiondialog.h"
 #include "uartframeparserwrapper.h"
@@ -22,8 +23,17 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+public slots:
+    void close();
+
 private slots:
+    void on_actionOpen_triggered();
+
+private slots:
+
     void onSettingsSaved(QSerialPort* serialPort, const QString& schema);
+
+    void onSchemaFileSelected(const QString &schemaFilePath);
 
     void onFrameReceived(const QJsonDocument& frameData);
 
@@ -38,6 +48,12 @@ private slots:
     void onFrameDefinitionChanged(int row, const QJsonObject &frameDefinitionObject);
 
     void onFrameDefinitionViewSelectionChanged(const QItemSelection &selection, const QItemSelection &deselection);
+
+    void onFrameDefinitionsChanged(const QModelIndex &parent, int first, int last);
+
+    void on_actionNew_triggered();
+
+    void on_initScriptPlainTextEdit_textChanged();
 
     void on_actionExit_triggered();
 
@@ -71,6 +87,15 @@ signals:
     void framesChanged(const QStringList &frameNames);
 
 private:
+    void refreshButtonBoxStatus();
+
+    void discardChanges();
+
+    bool saveChanges();
+
+    void loadSchemaFile();
+
+private:
     Ui::MainWindow *ui;
 
     SettingsDialog *m_settingsDialog;
@@ -91,6 +116,8 @@ private:
 
     QRegularExpressionValidator *m_validator;
 
-    QFileDialog *m_fileDialog;
+    SaveChangesDialog *m_saveChangesDialog;
+
+    bool changed = false;
 };
 #endif // MAINWINDOW_H

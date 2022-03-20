@@ -31,6 +31,17 @@ const QString &SettingsDialog::schema()
     return m_schema;
 }
 
+const QString &SettingsDialog::schemaFilePath()
+{
+    m_schemaFilePath = ui->schemaFilePathLineEdit->text();
+    return m_schemaFilePath;
+}
+
+void SettingsDialog::selectFile()
+{
+    m_fileDialog->exec();
+}
+
 void SettingsDialog::appendLog(const QString &topic, const QString &filename, int line, const QString &message)
 {
     qsizetype index = filename.lastIndexOf('/');
@@ -79,6 +90,7 @@ void SettingsDialog::onSerialPortErrorOccurred(QSerialPort::SerialPortError erro
 void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
 {
     ui->schemaFilePathLineEdit->setText(schemaFileName);
+    emit schemaFileSelected(schemaFileName);
 }
 
 void SettingsDialog::on_schemaFileOpenButton_clicked()

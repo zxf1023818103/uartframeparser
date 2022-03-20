@@ -1,21 +1,16 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 
-include(FetchContent)
-FetchContent_Declare(vcpkg
-    vcpkg
-    URL "https://github.com/microsoft/vcpkg/archive/master.zip")
-FetchContent_MakeAvailable(vcpkg)
-<<<<<<< HEAD
+if (NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    include(FetchContent)
+    FetchContent_Declare(vcpkg
+        vcpkg
+        GIT_REPOSITORY "https://github.com/microsoft/vcpkg.git"
+        GIT_TAG origin/master)
+    FetchContent_MakeAvailable(vcpkg)
+    set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake)
+endif()
 
 project("uartframeparser")
-
-set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake
-  CACHE STRING "Vcpkg toolchain file")
-=======
-set(CMAKE_TOOLCHAIN_FILE ${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake)
-
-project("uartframeparser")
->>>>>>> 4b5e2a9c2724c29e89ddd5e8aba4a21d4e5116f9
 
 # 禁用 MSVC 的使用不安全 C 语言标准库函数时弹出的警告
 if (MSVC)
@@ -82,6 +77,9 @@ set(PROJECT_SOURCES
         src/subframedialog.cpp
         src/subframedialog.h
         src/subframedialog.ui
+        src/savechangesdialog.cpp
+        src/savechangesdialog.h
+        src/savechangesdialog.ui
         src/logtextedit.cpp
         src/logtextedit.h
         src/uartframeparserwrapper.cpp

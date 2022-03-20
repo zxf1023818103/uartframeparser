@@ -8,7 +8,7 @@
       "projectTarget": "quartframeparser.exe",
       "name": "quartframeparser.exe",
       "env": {
-        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\Users\\tuya\\vcpkg\\installed\\x64-windows\\Qt6\\plugins\\platforms"
+        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\vcpkg\\packages\\qtbase_x64-windows\\Qt6\\plugins\\platforms"
       }
     },
     {
@@ -17,7 +17,7 @@
       "projectTarget": "quartframeparserd.exe",
       "name": "quartframeparserd.exe",
       "env": {
-        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\Users\\tuya\\vcpkg\\installed\\x64-windows\\debug\\Qt6\\plugins\\platforms"
+        "QT_QPA_PLATFORM_PLUGIN_PATH": "C:\\vcpkg\\packages\\qtbase_x64-windows\\debug\\Qt6\\plugins\\platforms"
       }
     }
   ]
