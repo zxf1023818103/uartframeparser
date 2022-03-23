@@ -22,6 +22,10 @@ public:
 
     const QString& schema();
 
+    const QString& schemaFilePath();
+
+    void selectFile();
+
 public slots:
     void appendLog(const QString& topic, const QString& filename, int line, const QString& message);
 
@@ -34,12 +38,16 @@ private slots:
 
     void onSchemaFileSelected(const QString &schemaFileName);
 
-    void on_schemaFileOpenButton_clicked();
+    void on_schemaFileSelectButton_clicked();
 
     void on_buttonBox_accepted();
 
+    void on_appearanceComboBox_textActivated(const QString &style);
+
 signals:
     void settingsSaved(QSerialPort *serialPort, const QString& schema);
+
+    void schemaFileSelected(const QString &schemaFilePath);
 
 private:
     Ui::SettingsDialog *ui = nullptr;
@@ -51,6 +59,8 @@ private:
     QSerialPort *m_serialPort = nullptr;
 
     QString m_schema;
+
+    QString m_schemaFilePath;
 };
 
 #endif // SETTINGSDIALOG_H

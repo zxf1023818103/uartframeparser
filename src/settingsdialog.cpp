@@ -2,6 +2,8 @@
 #include "ui_settingsdialog.h"
 #include <QVariant>
 #include <QFile>
+#include <QStyle>
+#include <QStyleFactory>
 
 SettingsDialog::SettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -14,6 +16,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     connect(m_fileDialog, SIGNAL(fileSelected(QString)), this, SLOT(onSchemaFileSelected(QString)));
     connect(ui->serialPortRefreshButton, SIGNAL(clicked()), this, SLOT(refreshSerialPortList()));
     connect(ui->serialPortComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(refreshSerialPortBaudRates(int)));
+
+    ui->appearanceComboBox->addItems(QStyleFactory::keys());
 }
 
 SettingsDialog::~SettingsDialog()
@@ -31,6 +35,17 @@ const QString &SettingsDialog::schema()
     return m_schema;
 }
 
+const QString &SettingsDialog::schemaFilePath()
+{
+    m_schemaFilePath = ui->schemaFilePathLineEdit->text();
+    return m_schemaFilePath;
+}
+
+void SettingsDialog::selectFile()
+{
+    m_fileDialog->exec();
+}
+
 void SettingsDialog::appendLog(const QString &topic, const QString &filename, int line, const QString &message)
 {
     qsizetype index = filename.lastIndexOf('/');
@@ -42,8 +57,8 @@ void SettingsDialog::appendLog(const QString &topic, const QString &filename, in
     }
 
     ui->logsTextEdit->appendMessage(QString("[%1][%2:%3] %4").arg(tr(topic.toLatin1()), filename.mid(index), QVariant(line).toString(), tr(message.toLatin1())));
-    hide();
-    show();
+
+    exec();
 }
 
 void SettingsDialog::refreshSerialPortList()
@@ -79,12 +94,12 @@ void SettingsDialog::onSerialPortErrorOccurred(QSerialPort::SerialPortError erro
 void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
 {
     ui->schemaFilePathLineEdit->setText(schemaFileName);
+    emit schemaFileSelected(schemaFileName);
 }
 
-void SettingsDialog::on_schemaFileOpenButton_clicked()
+void SettingsDialog::on_schemaFileSelectButton_clicked()
 {
-    m_fileDialog->hide();
-    m_fileDialog->show();
+    m_fileDialog->exec();
 }
 
 void SettingsDialog::on_buttonBox_accepted()
@@ -125,3 +140,9 @@ void SettingsDialog::on_buttonBox_accepted()
         appendLog("Settings", __FILE__, __LINE__, "Serial port is not selected");
     }
 }
+
+void SettingsDialog::on_appearanceComboBox_textActivated(const QString &style)
+{
+    QApplication::setStyle(QStyleFactory::create(style));
+}
+

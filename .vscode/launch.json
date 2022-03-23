@@ -1,0 +1,92 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "quartframeparser",
+            "type": "cppdbg",
+            "request": "launch",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "program": "${workspaceFolder}/build/quartframeparser",
+            "cwd": "${workspaceFolder}",
+            "osx": {
+                "environment": [
+                    {
+                        "name": "QT_QPA_PLATFORM_PLUGIN_PATH",
+                        "value": "${workspaceFolder}/build/vcpkg_installed/x64-osx/Qt6/plugins/platforms"
+                    }
+                ],
+                "MIMode": "lldb"
+            },
+            "linux": {
+                "environment": [
+                    {
+                        "name": "QT_QPA_PLATFORM_PLUGIN_PATH",
+                        "value": "${workspaceFolder}/build/vcpkg_installed/x64-linux/Qt6/plugins/platforms"
+                    }
+                ],
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "quartframeparserd",
+            "type": "cppdbg",
+            "request": "launch",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "program": "${workspaceFolder}/build/quartframeparserd",
+            "cwd": "${workspaceFolder}",
+            "osx": {
+                "environment": [
+                    {
+                        "name": "QT_QPA_PLATFORM_PLUGIN_PATH",
+                        "value": "${workspaceFolder}/build/vcpkg_installed/x64-osx/debug/Qt6/plugins/platforms"
+                    }
+                ],
+                "MIMode": "lldb"
+            },
+            "linux": {
+                "environment": [
+                    {
+                        "name": "QT_QPA_PLATFORM_PLUGIN_PATH",
+                        "value": "${workspaceFolder}/build/vcpkg_installed/x64-linux/debug/Qt6/plugins/platforms"
+                    }
+                ],
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "uartframeparsertest",
+            "type": "cppdbg",
+            "request": "launch",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "program": "${workspaceFolder}/build/uartframeparsertest",
+            "cwd": "${workspaceFolder}",
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "linux": {
+                "MIMode": "gdb"
+            }
+        },
+        {
+            "name": "uartframeparsertestd",
+            "type": "cppdbg",
+            "request": "launch",
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "program": "${workspaceFolder}/build/uartframeparsertestd",
+            "cwd": "${workspaceFolder}",
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "linux": {
+                "MIMode": "gdb"
+            }
+        }
+    ]
+}

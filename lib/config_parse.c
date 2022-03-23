@@ -694,10 +694,10 @@ parse_definitions_node(cJSON *definitions_node, struct uart_frame_parser_express
     return NULL;
 }
 
-static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_parser_error_callback_t on_error,
+static struct uart_frame_parser *parse_json_config(cJSON *config_root, uart_frame_parser_error_callback_t on_error,
                                                    uart_frame_parser_data_callback_t on_data, void* user_ptr) {
-    if (cJSON_IsObject(config)) {
-        config = config->child;
+    if (cJSON_IsObject(config_root)) {
+        cJSON* config = config_root->child;
 
         cJSON *definitions_node = NULL;
         cJSON *detected_frames_node = NULL;
@@ -734,6 +734,7 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
                     if (frame_definition_head) {
                         struct uart_frame_parser *parser = calloc(1, sizeof(struct uart_frame_parser));
                         if (parser) {
+                            parser->config = config_root;
                             parser->detected_frame_head = detected_frame_head;
                             parser->frame_definition_head = frame_definition_head;
                             parser->on_error = on_error;
@@ -764,8 +765,8 @@ static struct uart_frame_parser *parse_json_config(cJSON *config, uart_frame_par
             }
         }
     } else {
-        on_error(user_ptr, UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "config is not an object: %s",
-                 cJSON_Print(config));
+        on_error(user_ptr, UART_FRAME_PARSER_ERROR_PARSE_CONFIG, __FILE__, __LINE__, "config_root is not an object: %s",
+                 cJSON_Print(config_root));
     }
 
     return NULL;
@@ -789,5 +790,6 @@ void uart_frame_parser_release(struct uart_frame_parser *parser) {
     uart_frame_parser_expression_engine_release(parser->expression_engine);
     uart_frame_detected_frame_release(parser->detected_frame_head);
     uart_frame_definition_release(parser->frame_definition_head);
+    cJSON_Delete(parser->config);
     free(parser);
 }

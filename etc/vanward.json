@@ -1,0 +1,696 @@
+{
+    "definitions": [
+        {
+            "description": "MCU 上报结构",
+            "fields": [
+                {
+                    "bytes": 2,
+                    "description": "帧头",
+                    "name": "start_of_frame"
+                },
+                {
+                    "bytes": 28,
+                    "description": "数据包",
+                    "frames": [
+                        "heater_data_report",
+                        "boiler_data_report"
+                    ],
+                    "name": "data_package"
+                },
+                {
+                    "bytes": 2,
+                    "description": "校验和",
+                    "name": "checksum"
+                }
+            ],
+            "name": "mcu_report",
+            "validator": "return byte(1) == 0xAA and byte(2) == 0xAA and sum(1, 30) == ((byte(31) << 8) | byte(32))"
+        },
+        {
+            "description": "热水器数据上报",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "设备码",
+                    "name": "device_code",
+                    "tostring": "return '热水器'"
+                },
+                {
+                    "bytes": 27,
+                    "description": "数据包",
+                    "frames": [
+                        "heater_status_report",
+                        "pid_report",
+                        "module_command_package"
+                    ],
+                    "name": "data_package"
+                }
+            ],
+            "name": "heater_data_report",
+            "validator": "return byte(1) == 0x05"
+        },
+        {
+            "description": "壁挂炉数据上报",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "设备码",
+                    "name": "device_code",
+                    "tostring": "return '壁挂炉'"
+                },
+                {
+                    "bytes": 27,
+                    "description": "数据包",
+                    "frames": [
+                        "boiler_status_report1",
+                        "boiler_status_report2",
+                        "pid_report",
+                        "module_command_package"
+                    ],
+                    "name": "data_package"
+                }
+            ],
+            "name": "boiler_data_report",
+            "validator": "return byte(1) == 0x03"
+        },
+        {
+            "description": "热水器全状态上报",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "数据类型",
+                    "name": "data_type"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "开关机状态",
+                            "name": "power_status",
+                            "tostring": "return ({'关机', '开机'})[(byte(5) & 1) + 1]"
+                        },
+                        {
+                            "bits": 7
+                        }
+                    ],
+                    "bytes": 1
+                },
+                {
+                    "bytes": 1,
+                    "description": "模式",
+                    "name": "mode",
+                    "tostring": "return ({'自动模式', '电热模式', '热泵模式', '速热模式'})[byte(6)]"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "静音功能使能",
+                            "name": "mute_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "防冻功能使能",
+                            "name": "anti_freeze_enabled"
+                        },
+                        {
+                            "bits": 1
+                        },
+                        {
+                            "bits": 1,
+                            "description": "杀菌功能使能",
+                            "name": "disinfect_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "光伏功能使能",
+                            "name": "pv_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "太阳能循环功能使能",
+                            "name": "solor_energy_recycle_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "WiFi 功能使能",
+                            "name": "wifi_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "电子阳极功能使能",
+                            "name": "anti_rust_enabled"
+                        }
+                    ],
+                    "bytes": 1
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "防冻功能状态启动标志",
+                            "name": "auti_freeze_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "除霜功能状态启动标志",
+                            "name": "defrost_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "杀菌功能状态启动标志",
+                            "name": "disinfect_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "光伏功能状态启动标志",
+                            "name": "pv_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "预约 1 开关状态",
+                            "name": "reservation1_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "预约 2 开关状态",
+                            "name": "reservation2_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "预约 3 开关状态",
+                            "name": "reservation3_enabled"
+                        },
+                        {
+                            "bits": 1
+                        }
+                    ],
+                    "bytes": 1
+                },
+                {
+                    "bytes": 1,
+                    "description": "设置温度",
+                    "name": "target_tank_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "水箱温度",
+                    "name": "current_tank_temperature"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "压缩机输出状态",
+                            "name": "compressor_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "风机高档输出状态",
+                            "name": "fan_high_speed_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "风机低档输出状态",
+                            "name": "fan_low_speed_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "四通阀输出状态",
+                            "name": "four_way_valve_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "电加热输出状态",
+                            "name": "electric_heating_running"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "水泵输出状态",
+                            "name": "pump_running"
+                        },
+                        {
+                            "bits": 2
+                        }
+                    ],
+                    "bytes": 1
+                },
+                {
+                    "bytes": 1,
+                    "description": "膨胀阀开度（高 8 位）",
+                    "name": "valve_opening_h"
+                },
+                {
+                    "bytes": 1,
+                    "description": "膨胀阀开度（低 8 位）",
+                    "name": "valve_opening_l"
+                },
+                {
+                    "bytes": 1,
+                    "description": "排气温度",
+                    "name": "exhaust_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "环境温度",
+                    "name": "outdoor_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "盘管温度",
+                    "name": "coil_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "回气温度",
+                    "name": "gas_back_temperature"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "E0-串口通信故障",
+                            "name": "e0_bad_serial_port_communication"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E2-环境温度传感器故障",
+                            "name": "e2_bad_outdoor_temperature_sensor"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E3-盘管温度传感器故障",
+                            "name": "e3_bad_coil_temperature_sensor"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E5-水箱温度传感器故障",
+                            "name": "e5_bad_tank_temperature_sensor"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E6-排气温度传感器故障",
+                            "name": "e6_bad_exhaust_temperature_sensor"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E7-回气温度传感器故障",
+                            "name": "e7_bad_gas_back_temperature_sensor"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "P1-系统高压故障",
+                            "name": "p1_pressure_too_high"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "P2-排气温度过高故障",
+                            "name": "p2_exhaust_overheat"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "P3-电子阳极故障",
+                            "name": "p3_bad_anti_rust"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "E8-集热器温度传感器故障",
+                            "name": "e8_bad_collector_temperature_sensor"
+                        },
+                        {
+                            "bits": 6
+                        }
+                    ],
+                    "bytes": 2
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间1：小时0-23",
+                    "name": "reservation1_hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间1：分钟0-59",
+                    "name": "reservation1_minutes"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间2：小时0-23",
+                    "name": "reservation2_hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间2：分钟0-59",
+                    "name": "reservation2_minutes"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间3：小时0-23",
+                    "name": "reservation3_hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约时间3：分钟0-59",
+                    "name": "reservation3_minutes"
+                },
+                {
+                    "bytes": 1,
+                    "description": "集热器温度",
+                    "name": "collector_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "当前时间:小时0-23",
+                    "name": "hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "当前时间:分钟0-59",
+                    "name": "minutes"
+                },
+                {
+                    "bytes": 1,
+                    "description": "电源板版本",
+                    "name": "controller_version"
+                },
+                {
+                    "bytes": 1,
+                    "description": "显示板版本号",
+                    "name": "panel_version"
+                }
+            ],
+            "name": "heater_status_report",
+            "validator": "return byte(1) == 0x01"
+        },
+        {
+            "description": "PID 上报",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "数据类型",
+                    "name": "data_type"
+                },
+                {
+                    "bytes": 16,
+                    "description": "PID",
+                    "name": "pid"
+                },
+                {
+                    "bytes": 10,
+                    "name": "unused1"
+                }
+            ],
+            "name": "pid_report",
+            "validator": "return byte(1) == 0xF0"
+        },
+        {
+            "description": "模块功能指令数据包",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "数据类型",
+                    "name": "data_type"
+                },
+                {
+                    "bytes": 1,
+                    "description": "模块功能指令",
+                    "name": "module_command",
+                    "tostring": "return ({'配网', '注销', '产测', 'OTA'})[byte(5)]"
+                },
+                {
+                    "bytes": 25,
+                    "name": "unused2"
+                }
+            ],
+            "name": "module_command_package",
+            "validator": "return byte(1) == 0x02"
+        },
+        {
+            "description": "壁挂炉状态上报 1",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "数据类型",
+                    "name": "data_type"
+                },
+                {
+                    "bytes": 1,
+                    "description": "系统状态",
+                    "name": "device_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "App 安全灯",
+                    "name": "app_locked"
+                },
+                {
+                    "bytes": 1,
+                    "description": "火焰状态",
+                    "name": "flame_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "卫浴水流状态",
+                    "name": "bath_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "沐浴模式",
+                    "name": "bath_mode"
+                },
+                {
+                    "bytes": 1,
+                    "description": "风机状态",
+                    "name": "fan_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "供暖水泵",
+                    "name": "heating_pump_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "三通阀状态",
+                    "name": "three_way_valve_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "点火器状态",
+                    "name": "ignizer_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "防冻状态",
+                    "name": "antifreeze_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "水压",
+                    "name": "water_pressure"
+                },
+                {
+                    "bytes": 1,
+                    "description": "卫浴设置温度",
+                    "name": "bath_target_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "卫浴实际温度",
+                    "name": "bath_current_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "供暖设置温度",
+                    "name": "heating_target_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "供暖实际温度",
+                    "name": "heating_current_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "室外温度",
+                    "name": "outdoor_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "供暖运行模式",
+                    "name": "heating_mode"
+                },
+                {
+                    "bytes": 1,
+                    "description": "房间温度",
+                    "name": "indoor_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "风机转速",
+                    "name": "fan_speed"
+                },
+                {
+                    "bytes": 1,
+                    "description": "实时耗气量",
+                    "name": "gas_flow_rate"
+                },
+                {
+                    "bytes": 4,
+                    "description": "累计用气量",
+                    "name": "gas_volume"
+                },
+                {
+                    "bytes": 1,
+                    "description": "功率百分比",
+                    "name": "power_percentage"
+                },
+                {
+                    "bytes": 1,
+                    "description": "比例阀电流",
+                    "name": "proportional_valve_current"
+                }
+            ],
+            "name": "boiler_status_report1",
+            "validator": "return byte(1) == 0x01"
+        },
+        {
+            "description": "壁挂炉状态上报 2",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "description": "数据类型",
+                    "name": "data_type"
+                },
+                {
+                    "bytes": 1,
+                    "description": "供暖热传导模式",
+                    "name": "heating_type"
+                },
+                {
+                    "bytes": 1,
+                    "description": "机器类型",
+                    "name": "device_type"
+                },
+                {
+                    "bytes": 1,
+                    "description": "季节状态",
+                    "name": "season_status"
+                },
+                {
+                    "bytes": 1,
+                    "description": "故障状态",
+                    "name": "error_code"
+                },
+                {
+                    "bytes": 2,
+                    "description": "主板软件版本",
+                    "name": "controller_version"
+                },
+                {
+                    "bytes": 2,
+                    "description": "显示板软件版本",
+                    "name": "panel_version"
+                },
+                {
+                    "bytes": 1,
+                    "description": "智能温控开关",
+                    "name": "themostat_enabled"
+                },
+                {
+                    "bytes": 1,
+                    "description": "同步标识位",
+                    "name": "time_sync_success"
+                },
+                {
+                    "bytes": 1,
+                    "description": "MCU 上报时间的小时",
+                    "name": "hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "MCU 上报的的分钟",
+                    "name": "minutes"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 4,
+                            "description": "高级设置",
+                            "name": "advanced_settings"
+                        },
+                        {
+                            "bits": 2
+                        },
+                        {
+                            "bits": 1,
+                            "description": "点动",
+                            "name": "manual_enabled"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "单巡航",
+                            "name": "loop_enabled"
+                        }
+                    ],
+                    "bytes": 1,
+                    "description": "零冷水模式数据包",
+                    "name": "bath_anytime_mode_data"
+                },
+                {
+                    "bytes": 1,
+                    "description": "零冷水保温温度",
+                    "name": "bath_anytime_mode_temperature"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约开始时间（小时）",
+                    "name": "reservation_start_hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "预约结束时间（小时）",
+                    "name": "reservation_end_hours"
+                },
+                {
+                    "bytes": 1,
+                    "description": "卫浴水泵运行状态",
+                    "name": "bath_pump_status"
+                },
+                {
+                    "bytes": 2
+                },
+                {
+                    "bytes": 1,
+                    "description": "提示/保养代码",
+                    "name": "maintenance_status"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "房间温控器故障",
+                            "name": "themostat_error"
+                        },
+                        {
+                            "bits": 1,
+                            "description": "激活状态",
+                            "name": "activated"
+                        },
+                        {
+                            "bits": 6
+                        }
+                    ],
+                    "bytes": 1
+                },
+                {
+                    "bytes": 5
+                }
+            ],
+            "name": "boiler_status_report2",
+            "validator": "return byte(1) == 0x10"
+        }
+    ],
+    "frames": [
+        "mcu_report"
+    ],
+    "init": "function sum(from, to) result = 0; for i = from, to, 1 do result = result + byte(i) end; return result; end"
+}

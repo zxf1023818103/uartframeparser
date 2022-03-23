@@ -1,0 +1,87 @@
+{
+    "definitions": [
+        {
+            "fields": [
+                {
+                    "bytes": 2,
+                    "default": "return '\\x55\\xaa'",
+                    "description": "Start of Frame",
+                    "name": "sof"
+                },
+                {
+                    "bytes": 1,
+                    "description": "Length of Frame",
+                    "name": "length"
+                },
+                {
+                    "bytes": "return byte(3) - 4",
+                    "frames": [
+                        "subframe1",
+                        "subframe2"
+                    ],
+                    "name": "subframe"
+                },
+                {
+                    "bytes": 1,
+                    "description": "Checksum",
+                    "name": "checksum"
+                }
+            ],
+            "name": "status_report",
+            "validator": "return byte(1) == 0x55 and byte(2) == 0xaa and byte(byte(3)) == (sum(1, byte(3) - 1) & 0xff)"
+        },
+        {
+            "description": "Subframe 1",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "default": "return '\\x01'",
+                    "description": "Start of Frame",
+                    "name": "sof",
+                    "tostring": "return 'Start of Frame'"
+                },
+                {
+                    "bitfields": [
+                        {
+                            "bits": 1,
+                            "description": "Fan Status",
+                            "name": "fan_status",
+                            "tostring": "return ({'Off','On'})[(byte(2) & 1) + 1]"
+                        },
+                        {
+                            "bits": 7
+                        }
+                    ],
+                    "bytes": 1,
+                    "description": "Working status",
+                    "name": "working_status"
+                }
+            ],
+            "name": "subframe1",
+            "validator": "return byte(1) == 0x01"
+        },
+        {
+            "description": "Subframe 2",
+            "fields": [
+                {
+                    "bytes": 1,
+                    "default": "return '\\x02'",
+                    "description": "Start of Frame",
+                    "name": "sof"
+                },
+                {
+                    "bytes": 1,
+                    "description": "Fan status",
+                    "name": "fan_status"
+                }
+            ],
+            "name": "subframe2",
+            "validator": "return byte(1) == 0x02"
+        }
+    ],
+    "frames": [
+        "status_report",
+        "subframe2"
+    ],
+    "init": "function sum(from, to) result = 0; for i = from, to, 1 do result = result + byte(i) end; return result; end"
+}
