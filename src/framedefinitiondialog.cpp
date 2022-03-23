@@ -63,7 +63,7 @@ void FrameDefinitionDialog::onFieldDefinitionChanged(int row, const QJsonObject 
 {
     const QString &name = fieldDefinitionObject["name"].toString();
     const QString &description = fieldDefinitionObject["description"].toString();
-    const QString &whichContains = tr(fieldDefinitionObject.contains("frames") ? "Subframes" : (fieldDefinitionObject.contains("bitfields") ? "Bitfields" : "None"));
+    const QString &whichContains = fieldDefinitionObject.contains("frames") ? tr("Subframes") : (fieldDefinitionObject.contains("bitfields") ? tr("Bitfields") : tr("None"));
 
     if (row < 0) {
         QStandardItem *nameItem = new QStandardItem(name);
@@ -205,11 +205,6 @@ void FrameDefinitionDialog::on_nameLineEdit_textChanged(const QString &arg1)
 
 
 void FrameDefinitionDialog::on_fieldDefinitionsView_doubleClicked(const QModelIndex &index)
-{
-    emit fieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
-}
-
-void FrameDefinitionDialog::on_fieldDefinitionsView_entered(const QModelIndex &index)
 {
     emit fieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
 }

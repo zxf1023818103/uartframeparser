@@ -34,9 +34,6 @@ public slots:
     void onFieldDefinitionClicked(int row, const QJsonObject& fieldDefinitionObject);
 
 private slots:
-    void on_bitfieldDefinitionsView_entered(const QModelIndex &index);
-
-private slots:
     void on_bitfieldDefinitionsView_doubleClicked(const QModelIndex &index);
 
 private slots:
@@ -89,8 +86,6 @@ private slots:
     void on_buttonBox_rejected();
 
     void on_subframesView_doubleClicked(const QModelIndex &index);
-
-    void on_subframesView_entered(const QModelIndex &index);
 
     void on_addSubframeButton_clicked();
 

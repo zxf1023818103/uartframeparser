@@ -6,6 +6,7 @@
 #include <QRegularExpressionValidator>
 #include <QJsonObject>
 #include <QMap>
+#include "aboutdialog.h"
 #include "savechangesdialog.h"
 #include "settingsdialog.h"
 #include "framedefinitiondialog.h"
@@ -77,9 +78,9 @@ private slots:
 
     void on_frameDefinitionsView_doubleClicked(const QModelIndex &index);
 
-    void on_frameDefinitionsView_entered(const QModelIndex &index);
-
     void on_actionSave_triggered();
+
+    void on_actionAbout_triggered();
 
 signals:
     void frameDefinitionClicked(int row, const QJsonObject &frameDefinitionObject);
@@ -97,6 +98,8 @@ private:
 
 private:
     Ui::MainWindow *ui;
+
+    AboutDialog *m_aboutDialog;
 
     SettingsDialog *m_settingsDialog;
 

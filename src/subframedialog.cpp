@@ -18,11 +18,7 @@ SubframeDialog::~SubframeDialog()
 void SubframeDialog::onSubframeClicked(int row, const QString &subframe)
 {
     m_row = row;
-    if (row < 0) {
-        setWindowTitle(tr("New Subframe"));
-    }
-    else {
-        setWindowTitle(tr("Subframe - %1").arg(subframe));
+    if (row >= 0) {
         ui->subframeComboBox->setCurrentText(subframe);
     }
 

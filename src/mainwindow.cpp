@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QDebug>
 #include <QRegularExpression>
+#include <QList>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -29,7 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->sendingDataView->setModel(m_sendingDataViewModel);
 
     m_frameDefinitionsViewModel = new QStandardItemModel(ui->frameDefinitionsView);
-    m_frameDefinitionsViewModel->setHorizontalHeaderLabels({ tr("Name"), tr("Description") });
+    m_frameDefinitionsViewModel->setHorizontalHeaderLabels({ tr("Need Detection"), tr("Name"), tr("Description") });
     ui->frameDefinitionsView->setModel(m_frameDefinitionsViewModel);    
 
     m_settingsDialog = new SettingsDialog(this);
@@ -41,9 +42,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_saveChangesDialog = new SaveChangesDialog(this);
 
-    connect(m_settingsDialog, SIGNAL(settingsSaved(QSerialPort*, QString)), this, SLOT(onSettingsSaved(QSerialPort*, QString)));
+    m_aboutDialog = new AboutDialog(this);
+
+    connect(m_settingsDialog, SIGNAL(settingsSaved(QSerialPort*,QString)), this, SLOT(onSettingsSaved(QSerialPort*,QString)));
     connect(m_settingsDialog, SIGNAL(schemaFileSelected(QString)), this, SLOT(onSchemaFileSelected(QString)));
-    connect(m_frameParser, SIGNAL(errorOccurred(QString, QString, int, QString)), m_settingsDialog, SLOT(appendLog(QString, QString, int, QString)));
+    connect(m_frameParser, SIGNAL(errorOccurred(QString,QString,int,QString)), m_settingsDialog, SLOT(appendLog(QString,QString,int,QString)));
     connect(m_frameParser, SIGNAL(frameReceived(QJsonDocument)), this, SLOT(onFrameReceived(QJsonDocument)));
     connect(m_sendingDataViewModel, SIGNAL(itemChanged(QStandardItem*)), this, SLOT(onSendingDataItemChanged(QStandardItem*)));
     connect(ui->historyView, SIGNAL(activated(QModelIndex)), this, SLOT(onHistoryListViewActivated(QModelIndex)));
@@ -84,7 +87,7 @@ void MainWindow::onSettingsSaved(QSerialPort *serialPort, const QString& schema)
 
 void MainWindow::onSchemaFileSelected(const QString &schemaFilePath)
 {
-    loadSchemaFile(); // TODO
+    loadSchemaFile();
 }
 
 void MainWindow::onFrameReceived(const QJsonDocument &frameData)
@@ -228,15 +231,17 @@ void MainWindow::onSerialPortReadyRead()
 void MainWindow::onFrameDefinitionChanged(int row, const QJsonObject &frameDefinitionObject)
 {
     if (row < 0) {
-        QStandardItem *nameModel = new QStandardItem(frameDefinitionObject["name"].toString());
-        nameModel->setData(frameDefinitionObject);
-        QStandardItem *descriptionModel = new QStandardItem(frameDefinitionObject["description"].toString());
+        QStandardItem *needDetectionItem = new QStandardItem();
+        needDetectionItem->setCheckable(true);
+        needDetectionItem->setData(frameDefinitionObject);
+        QStandardItem *nameItem = new QStandardItem(frameDefinitionObject["name"].toString());
+        QStandardItem *descriptionItem = new QStandardItem(frameDefinitionObject["description"].toString());
 
-        m_frameDefinitionsViewModel->appendRow({ nameModel, descriptionModel });
+        m_frameDefinitionsViewModel->appendRow({ needDetectionItem, nameItem, descriptionItem });
     }
     else {
-        QStandardItem *nameModel = m_frameDefinitionsViewModel->item(row, 0);
-        QStandardItem *descriptionModel = m_frameDefinitionsViewModel->item(row, 1);
+        QStandardItem *nameModel = m_frameDefinitionsViewModel->item(row, 1);
+        QStandardItem *descriptionModel = m_frameDefinitionsViewModel->item(row, 2);
 
         nameModel->setData(frameDefinitionObject);
         nameModel->setText(frameDefinitionObject["name"].toString());
@@ -335,7 +340,8 @@ void MainWindow::on_deleteFrameDefinitionButton_clicked()
 
 void MainWindow::on_editFrameDefinitionButton_clicked()
 {
-    on_frameDefinitionsView_entered(ui->frameDefinitionsView->currentIndex());
+    const QModelIndex &index = ui->frameDefinitionsView->currentIndex();
+    emit frameDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
 }
 
 void MainWindow::on_frameDefinitionsView_activated(const QModelIndex &index)
@@ -347,15 +353,8 @@ void MainWindow::on_frameDefinitionsView_activated(const QModelIndex &index)
 
 void MainWindow::on_frameDefinitionsView_doubleClicked(const QModelIndex &index)
 {
-    on_frameDefinitionsView_entered(index);
-}
-
-
-void MainWindow::on_frameDefinitionsView_entered(const QModelIndex &index)
-{
     emit frameDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
 }
-
 
 void MainWindow::on_actionSave_triggered()
 {
@@ -380,17 +379,24 @@ bool MainWindow::saveChanges()
         m_settingsDialog->selectFile();
     }
 
-    if (m_settingsDialog->schemaFilePath().trimmed().isEmpty()) {
+    if (!m_settingsDialog->schemaFilePath().trimmed().isEmpty()) {
         QFile *schemaFile = new QFile(m_settingsDialog->schemaFilePath());
 
         QJsonObject *schema = new QJsonObject();
         schema->insert("init", ui->initScriptPlainTextEdit->toPlainText());
 
         QJsonArray *frameDefinitions = new QJsonArray();
+        QJsonArray *detectedFrames = new QJsonArray();
         for (int i = 0; i < m_frameDefinitionsViewModel->rowCount(); i++) {
-            frameDefinitions->append(m_frameDefinitionsViewModel->item(i)->data().toJsonObject());
+            QStandardItem *needDetectionItem = m_frameDefinitionsViewModel->item(i, 0);
+            QStandardItem *nameItem = m_frameDefinitionsViewModel->item(i, 1);
+            frameDefinitions->append(needDetectionItem->data().toJsonObject());
+            if (needDetectionItem->checkState() == Qt::Checked) {
+                detectedFrames->append(nameItem->text());
+            }
         }
         schema->insert("definitions", *frameDefinitions);
+        schema->insert("frames", *detectedFrames);
 
         QJsonDocument *document = new QJsonDocument(*schema);
 
@@ -440,8 +446,20 @@ void MainWindow::loadSchemaFile()
                 }
 
                 const QJsonArray &framesToBeDetectedArray = config["frames"].toArray();
+                QList<QString> framesToBeDetected;
                 for (auto i = framesToBeDetectedArray.constBegin(); i != framesToBeDetectedArray.constEnd(); i++) {
+                    framesToBeDetected.append(i->toString());
+                }
 
+                for (int i = 0; i < m_frameDefinitionsViewModel->rowCount(); i++) {
+                    QStandardItem *needDetectionItem = m_frameDefinitionsViewModel->item(i);
+                    QStandardItem *nameItem = m_frameDefinitionsViewModel->item(i, 1);
+                    if (framesToBeDetected.contains(nameItem->text())) {
+                        needDetectionItem->setCheckState(Qt::Checked);
+                    }
+                    else {
+                        needDetectionItem->setCheckState(Qt::Unchecked);
+                    }
                 }
             }
             else {
@@ -482,5 +500,11 @@ void MainWindow::on_actionNew_triggered()
 void MainWindow::on_actionOpen_triggered()
 {
     m_settingsDialog->selectFile();
+}
+
+
+void MainWindow::on_actionAbout_triggered()
+{
+    m_aboutDialog->exec();
 }
 

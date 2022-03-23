@@ -21,9 +21,6 @@ public:
     ~FrameDefinitionDialog();
 
 private slots:
-    void on_fieldDefinitionsView_entered(const QModelIndex &index);
-
-private slots:
     void on_fieldDefinitionsView_doubleClicked(const QModelIndex &index);
 
 private slots:

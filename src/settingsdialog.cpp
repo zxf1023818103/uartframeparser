@@ -2,6 +2,8 @@
 #include "ui_settingsdialog.h"
 #include <QVariant>
 #include <QFile>
+#include <QStyle>
+#include <QStyleFactory>
 
 SettingsDialog::SettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -14,6 +16,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     connect(m_fileDialog, SIGNAL(fileSelected(QString)), this, SLOT(onSchemaFileSelected(QString)));
     connect(ui->serialPortRefreshButton, SIGNAL(clicked()), this, SLOT(refreshSerialPortList()));
     connect(ui->serialPortComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(refreshSerialPortBaudRates(int)));
+
+    ui->appearanceComboBox->addItems(QStyleFactory::keys());
 }
 
 SettingsDialog::~SettingsDialog()
@@ -93,7 +97,7 @@ void SettingsDialog::onSchemaFileSelected(const QString &schemaFileName)
     emit schemaFileSelected(schemaFileName);
 }
 
-void SettingsDialog::on_schemaFileOpenButton_clicked()
+void SettingsDialog::on_schemaFileSelectButton_clicked()
 {
     m_fileDialog->exec();
 }
@@ -136,3 +140,9 @@ void SettingsDialog::on_buttonBox_accepted()
         appendLog("Settings", __FILE__, __LINE__, "Serial port is not selected");
     }
 }
+
+void SettingsDialog::on_appearanceComboBox_textActivated(const QString &style)
+{
+    QApplication::setStyle(QStyleFactory::create(style));
+}
+

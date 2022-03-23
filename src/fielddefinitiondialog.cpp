@@ -318,13 +318,6 @@ void FieldDefinitionDialog::on_subframesView_doubleClicked(const QModelIndex &in
     emit subframeClicked(m_row, m_subframesViewModel->itemFromIndex(index)->text());
 }
 
-
-void FieldDefinitionDialog::on_subframesView_entered(const QModelIndex &index)
-{
-    emit subframeClicked(m_row, m_subframesViewModel->itemFromIndex(index)->text());
-}
-
-
 void FieldDefinitionDialog::on_addSubframeButton_clicked()
 {
     emit subframeClicked(-1, QString());
@@ -430,10 +423,3 @@ void FieldDefinitionDialog::on_bitfieldDefinitionsView_doubleClicked(const QMode
 {
     emit bitfieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
 }
-
-
-void FieldDefinitionDialog::on_bitfieldDefinitionsView_entered(const QModelIndex &index)
-{
-    emit bitfieldDefinitionClicked(index.row(), index.siblingAtColumn(0).data(Qt::UserRole + 1).toJsonObject());
-}
-
