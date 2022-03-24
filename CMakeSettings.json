@@ -10,7 +10,8 @@
       "variables": [
         {
           "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows"
+          "value": "x64-windows",
+          "type": "STRING"
         }
       ]
     },
@@ -24,7 +25,8 @@
       "variables": [
         {
           "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows"
+          "value": "x64-windows",
+          "type": "STRING"
         }
       ]
     },
@@ -38,7 +40,8 @@
       "variables": [
         {
           "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows"
+          "value": "x64-windows",
+          "type": "STRING"
         }
       ]
     },
@@ -52,9 +55,61 @@
       "variables": [
         {
           "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows"
+          "value": "x64-windows",
+          "type": "STRING"
         }
       ]
+    },
+    {
+      "name": "x86-Release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "variables": [
+        {
+          "name": "CMAKE_BUILD_TYPE",
+          "value": "Release",
+          "type": "STRING"
+        }
+      ]
+    },
+    {
+      "name": "x86-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ]
+    },
+    {
+      "name": "arm64-Release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_arm64_x64" ]
+    },
+    {
+      "name": "arm64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_arm64_x64" ]
     }
   ]
 }
