@@ -6,14 +6,7 @@
       "configurationType": "Release",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "variables": [
-        {
-          "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows",
-          "type": "STRING"
-        }
-      ]
+      "installRoot": "${projectDir}\\out\\install\\${name}"
     },
     {
       "name": "x64-Debug",
@@ -21,62 +14,18 @@
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "variables": [
-        {
-          "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows",
-          "type": "STRING"
-        }
-      ]
-    },
-    {
-      "name": "x64-RelWithDebInfo",
-      "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "variables": [
-        {
-          "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows",
-          "type": "STRING"
-        }
-      ]
-    },
-    {
-      "name": "x64-MinSizeRel",
-      "generator": "Ninja",
-      "configurationType": "MinSizeRel",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "variables": [
-        {
-          "name": "VCPKG_TARGET_TRIPLET",
-          "value": "x64-windows",
-          "type": "STRING"
-        }
-      ]
+      "installRoot": "${projectDir}\\out\\install\\${name}"
     },
     {
       "name": "x86-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Release",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x86" ],
-      "variables": [
-        {
-          "name": "CMAKE_BUILD_TYPE",
-          "value": "Release",
-          "type": "STRING"
-        }
-      ]
+      "inheritEnvironments": [ "msvc_x86" ]
     },
     {
       "name": "x86-Debug",
@@ -92,7 +41,7 @@
     {
       "name": "arm64-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Release",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
