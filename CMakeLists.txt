@@ -139,10 +139,10 @@ if (QT_FOUND)
             MANUAL_FINALIZATION
             ${PROJECT_SOURCES}
         )
-        qt_create_translation(MESSAGES ${PROJECT_SOURCES} ${TS_FILES})
+        if (EXISTS ${TS_FILES})
+            qt_create_translation(MESSAGES ${PROJECT_SOURCES} ${TS_FILES})
+        endif()
         qt_add_translation(QM_FILES ${TS_FILES})
-        add_custom_target(translations DEPENDS ${QM_FILES})
-        add_dependencies(${UARTFRAMEPARSER_GUI_NAME} translations)
     # Define target properties for Android with Qt 6 as:
     #    set_property(TARGET uartframeparser APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
     #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
@@ -159,9 +159,14 @@ if (QT_FOUND)
                 ${PROJECT_SOURCES}
             )
         endif()
-
-        qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+        if (EXISTS ${TS_FILES})
+            qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+        endif()
+        qt5_add_translation(QM_FILES ${TS_FILES})
     endif()
+
+    add_custom_target(translations DEPENDS ${QM_FILES})
+    add_dependencies(${UARTFRAMEPARSER_GUI_NAME} translations)
 
     target_link_libraries(${UARTFRAMEPARSER_GUI_NAME} PRIVATE Qt::Core Qt6::Core Qt::CorePrivate Qt6::CorePrivate)
     target_link_libraries(${UARTFRAMEPARSER_GUI_NAME} PRIVATE Qt::EntryPointPrivate Qt6::EntryPointPrivate Qt6::EntryPointImplementation)
@@ -188,10 +193,16 @@ if (QT_FOUND)
         else()
             file(GLOB QT_QPA_PLATFORM_PLUGIN_PATH ${QT_DIR}/../../Qt6/plugins)
         endif()
-        string(JOIN "-" TARBALL_NAME ${CMAKE_PROJECT_NAME} ${GIT_BRANCH} ${GIT_REV} ${CMAKE_BUILD_TYPE})
+        string(JOIN "-" TARBALL_NAME ${UARTFRAMEPARSER_GUI_NAME} ${GIT_BRANCH} ${GIT_REV} ${VCPKG_TARGET_TRIPLET} ${CMAKE_BUILD_TYPE})
         string(TOLOWER ${TARBALL_NAME} TARBALL_NAME)
         add_custom_command(TARGET ${UARTFRAMEPARSER_GUI_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -DNAME=${TARBALL_NAME} -DQT_QPA_PLATFORM_PLUGIN_PATH:PATH=${QT_QPA_PLATFORM_PLUGIN_PATH} -P ${CMAKE_CURRENT_LIST_DIR}/generate_tarball.cmake)
+        set_property(
+            TARGET ${UARTFRAMEPARSER_GUI_NAME}
+            APPEND
+            PROPERTY ADDITIONAL_CLEAN_FILES ${TARBALL_NAME}.zip platforms styles ${QM_FILES}
+)
+
     endif()
 endif()
 
